@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nations Defense</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="jeu"></canvas>
+
+      <div id="hud">
+        <div id="progression"><div id="progression-fill"></div></div>
+
+        <header id="barre-haut">
+          <div id="ressources"></div>
+
+          <div class="jauge" title="Âmes — droppées par les ennemis, servent aux upgrades">
+            <span class="icone">👻</span><span id="val-ames" class="val">0</span>
+          </div>
+          <div class="jauge" title="Vies restantes">
+            <span class="icone">❤️</span><span id="val-vies" class="val">0</span>
+          </div>
+          <div class="jauge" title="Vague">
+            <span class="icone">🌊</span><span id="val-vague" class="val">0 / 10</span>
+          </div>
+          <div class="jauge" title="Temps de jeu écoulé">
+            <span class="icone">⏱</span><span id="val-temps" class="val">0:00</span>
+          </div>
+          <div class="jauge accentue" id="jauge-compteur" title="Prochaine vague">
+            <span class="icone">⏳</span><span id="val-compteur" class="val">—</span>
+          </div>
+          <div class="jauge adverse" id="jauge-adversaire" hidden title="État de l’adversaire">
+            <span class="icone">🗡</span><span id="val-adversaire" class="val">—</span>
+          </div>
+
+          <div class="ecart"></div>
+
+          <button id="btn-zone" title="Basculer entre les deux zones (Tab)">🌾 Ferme</button>
+          <button id="btn-vitesse" title="Vitesse de jeu (V)">▶ 1×</button>
+        </header>
+
+        <aside id="panneau" hidden>
+          <div class="titre">
+            <span id="pan-nom">—</span>
+            <span id="pan-sous" class="pays"></span>
+          </div>
+          <div id="pan-niveau" class="niveau"></div>
+          <div id="pan-stats" class="stats"></div>
+          <p id="pan-desc" class="desc"></p>
+          <button id="btn-upgrade" class="principal"></button>
+          <div class="ligne">
+            <button id="btn-cible" title="Mode de ciblage (C)">Cible : Premier</button>
+            <button id="btn-vendre" class="danger">Vendre</button>
+          </div>
+        </aside>
+
+        <aside id="armee" hidden>
+          <div class="titre">
+            <span>⚔ Armée à envoyer</span>
+          </div>
+          <p class="note-armee">
+            Part sur l’adversaire au lancement de la vague. Clic droit sur une ligne
+            pour en retirer une.
+          </p>
+          <div id="lignes-unites"></div>
+          <div id="total-armee" class="total">Aucune unité en attente</div>
+        </aside>
+
+        <footer id="boutique">
+          <div id="onglets">
+            <button class="onglet actif" data-onglet="defense">⚔ Défense</button>
+            <button class="onglet" data-onglet="ferme">🌾 Ferme</button>
+          </div>
+          <div id="cartes"></div>
+        </footer>
+
+        <div id="bandeau" hidden></div>
+
+        <div id="aide">
+          Clic : poser / sélectionner · Clic droit : annuler · Molette : zoom · WASD ou
+          glisser-droit : caméra · Tab : changer de zone · V : vitesse
+        </div>
+
+        <!-- Menu de démarrage : la carte générée reste visible derrière. -->
+        <div id="menu">
+          <div class="panneau-menu">
+            <h1>Nations Defense</h1>
+            <p class="accroche">
+              Tower defense &times; gestion. Tenez 10 vagues : la ferme paie la défense.
+            </p>
+
+            <div class="choix choix-mode" id="choix-mode">
+              <button data-mode="solo" class="actif">
+                <span class="cran">Hors ligne</span>
+                <span class="titre-choix">Solo</span>
+                <span class="detail">Tenez les 10 vagues tout seul.</span>
+              </button>
+              <button data-mode="duel">
+                <span class="cran">En ligne</span>
+                <span class="titre-choix">1 vs 1</span>
+                <span class="detail">
+                  Chacun sa carte et sa ferme. Préparez une armée et balancez-la sur
+                  l’autre avant chaque vague.
+                </span>
+              </button>
+            </div>
+
+            <section id="section-reseau" hidden>
+              <h2>Salon en ligne</h2>
+              <p class="note">
+                Lancez le serveur avec <code>npm run serveur</code>, puis entrez le même
+                code de salon des deux côtés.
+              </p>
+              <div class="champs">
+                <label>Pseudo<input id="in-pseudo" maxlength="16" value="Joueur" /></label>
+                <label>Salon<input id="in-salon" maxlength="8" value="AXEL" /></label>
+              </div>
+              <label class="champ-large"
+                >Serveur<input id="in-serveur" /></label
+              >
+              <button id="btn-connecter">Se connecter</button>
+              <div id="etat-reseau" class="etat">Hors ligne</div>
+              <ul id="liste-joueurs"></ul>
+            </section>
+
+            <section>
+              <h2>Difficulté de la ferme</h2>
+              <p class="note">Nombre de spots de récolte, stock de départ et prix.</p>
+              <div class="choix" id="choix-ferme"></div>
+            </section>
+
+            <section>
+              <h2>Difficulté de la carte</h2>
+              <p class="note">Longueur du chemin, donc temps de tir pour vos tours.</p>
+              <div class="choix" id="choix-carte"></div>
+            </section>
+
+            <div class="ligne-graine">
+              <span>Carte n° <b id="val-graine">1</b> · <b id="val-longueur">—</b></span>
+              <button id="btn-graine">🎲 Autre carte</button>
+            </div>
+
+            <button id="btn-jouer" class="principal grand">Lancer la partie</button>
+          </div>
+        </div>
+
+        <div id="fin" hidden>
+          <h1 id="fin-titre"></h1>
+          <p id="fin-texte"></p>
+          <div id="fin-stats"></div>
+          <div class="ligne-fin">
+            <button id="btn-rejouer" class="principal">Rejouer cette carte</button>
+            <button id="btn-menu">Retour au menu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

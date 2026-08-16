@@ -1,0 +1,13 @@
+# Le Dockerfile copie explicitement ce dont il a besoin ; ceci garde le contexte
+# de build léger et évite qu'un dist/ ou un node_modules local ne s'y glisse.
+node_modules
+dist
+.git
+.gitignore
+.claude
+README.md
+Dockerfile
+.dockerignore
+docker-compose.yml
+volumes
+*.log

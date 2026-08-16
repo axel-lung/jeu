@@ -1,0 +1,803 @@
+/* Nations Defense — habillage de l'interface (le jeu lui-même est dessiné sur le canvas). */
+
+:root {
+  --fond: #0e1420;
+  --panneau: rgba(20, 27, 42, 0.92);
+  --bord: rgba(255, 255, 255, 0.14);
+  --texte: #eef2ff;
+  --texte-doux: #9aa7c2;
+  --or: #ffd166;
+  --ames: #c9a7ff;
+  --vies: #ff7b8a;
+  --vague: #6fd3ff;
+  --accent: #ffb03a;
+  --ombre: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/*
+ * L'attribut `hidden` ne vaut que `display: none` dans la feuille de l'agent
+ * utilisateur : n'importe quelle règle d'auteur qui pose un `display` (par ex.
+ * `#fin { display: flex }`) la surclasse et l'élément reste visible. On rétablit
+ * la priorité une fois pour toutes, sinon tout élément masqué via `.hidden = true`
+ * en JS continue de s'afficher.
+ */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: 'Segoe UI', 'Trebuchet MS', system-ui, sans-serif;
+  user-select: none;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+#jeu {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#hud button {
+  pointer-events: auto;
+  font: inherit;
+  font-weight: 600;
+  color: var(--texte);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--bord);
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.08s;
+}
+
+#hud button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+#hud button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+#hud button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+#hud button.principal {
+  background: linear-gradient(180deg, #ffc55c, #f08a1d);
+  border-color: rgba(0, 0, 0, 0.25);
+  color: #2a1a00;
+}
+
+#hud button.danger {
+  background: rgba(255, 90, 110, 0.18);
+  border-color: rgba(255, 90, 110, 0.4);
+}
+
+/* ---------- Barre du haut ---------- */
+
+#barre-haut {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(10, 15, 25, 0.9), rgba(10, 15, 25, 0));
+}
+
+/* Les 4 ressources de la ferme, groupées et séparées du reste. */
+#ressources {
+  display: flex;
+  gap: 6px;
+  padding-right: 8px;
+  margin-right: 4px;
+  border-right: 1px solid var(--bord);
+}
+
+.jauge {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 12px;
+  background: var(--panneau);
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  box-shadow: var(--ombre);
+  white-space: nowrap;
+}
+
+.jauge .icone {
+  font-size: 15px;
+}
+
+/* Débit de production, affiché en petit à côté du stock. */
+.jauge .taux {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7ee08a;
+  min-width: 34px;
+}
+
+#val-ames {
+  color: var(--ames);
+}
+#val-vies {
+  color: var(--vies);
+}
+#val-vague {
+  color: var(--vague);
+}
+
+.ecart {
+  flex: 1;
+}
+
+/* ---------- Boutique de tours ---------- */
+
+#boutique {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 94vw;
+}
+
+#onglets {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  background: var(--panneau);
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  box-shadow: var(--ombre);
+}
+
+#hud .onglet {
+  padding: 5px 16px;
+  font-size: 13px;
+  border: none;
+  background: transparent;
+}
+
+#hud .onglet.actif {
+  background: rgba(255, 176, 58, 0.2);
+  color: var(--accent);
+}
+
+#cartes {
+  display: flex;
+  gap: 10px;
+  max-width: 94vw;
+  padding: 4px 2px;
+  overflow-x: auto;
+}
+
+.carte {
+  pointer-events: auto;
+  flex: 0 0 auto;
+  width: 148px;
+  padding: 10px;
+  text-align: left;
+  background: var(--panneau);
+  border: 1px solid var(--bord);
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: var(--ombre);
+  transition: border-color 0.12s, transform 0.1s, background 0.12s;
+}
+
+.carte:hover:not(.inabordable) {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+}
+
+.carte.active {
+  border-color: var(--accent);
+  background: rgba(255, 176, 58, 0.16);
+}
+
+.carte.inabordable {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.carte .apercu {
+  display: block;
+  width: 100%;
+  height: 58px;
+}
+
+.carte .nom {
+  display: block;
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.carte .role {
+  display: block;
+  font-size: 11px;
+  color: var(--texte-doux);
+  min-height: 26px;
+  margin: 3px 0 6px;
+}
+
+.carte .prix {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--or);
+}
+
+.carte .touche {
+  float: right;
+  font-size: 11px;
+  color: var(--texte-doux);
+  border: 1px solid var(--bord);
+  border-radius: 5px;
+  padding: 0 5px;
+}
+
+/* ---------- Panneau de tour sélectionnée ---------- */
+
+#panneau {
+  position: absolute;
+  top: 70px;
+  right: 16px;
+  width: 260px;
+  padding: 14px;
+  background: var(--panneau);
+  border: 1px solid var(--bord);
+  border-radius: 14px;
+  box-shadow: var(--ombre);
+  pointer-events: auto;
+}
+
+#panneau .titre {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+#panneau .pays {
+  font-size: 12px;
+  color: var(--texte-doux);
+  font-weight: 400;
+}
+
+#panneau .niveau {
+  display: flex;
+  gap: 4px;
+  margin: 9px 0;
+}
+
+#panneau .pip {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+#panneau .pip.on {
+  background: linear-gradient(90deg, var(--accent), #ffe08a);
+}
+
+#panneau .stats {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  font-size: 12px;
+  color: var(--texte-doux);
+  font-variant-numeric: tabular-nums;
+}
+
+#panneau .stats b {
+  color: var(--texte);
+  font-weight: 700;
+}
+
+#panneau .gain {
+  color: #7ee08a;
+  font-weight: 700;
+}
+
+#panneau .desc {
+  font-size: 12px;
+  color: var(--texte-doux);
+  line-height: 1.4;
+  margin: 10px 0;
+  min-height: 32px;
+}
+
+#panneau button {
+  width: 100%;
+}
+
+#panneau .ligne {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#panneau .ligne button {
+  font-size: 12px;
+  padding: 7px 8px;
+}
+
+/* ---------- Barre de progression du haut ---------- */
+
+#progression {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#progression-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.12s linear, background 0.3s;
+}
+
+#progression-fill.assaut {
+  background: var(--vies);
+}
+
+.jauge.accentue {
+  border-color: rgba(255, 176, 58, 0.5);
+}
+
+.jauge.accentue .val {
+  color: var(--accent);
+}
+
+/* ---------- Menu de démarrage ---------- */
+
+#menu {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(8, 12, 20, 0.55);
+  pointer-events: auto;
+  overflow-y: auto;
+}
+
+.panneau-menu {
+  width: min(620px, 100%);
+  padding: 26px 28px;
+  background: rgba(16, 22, 35, 0.94);
+  border: 1px solid var(--bord);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.panneau-menu h1 {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, #ffd166, #ff8a6b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.panneau-menu .accroche {
+  margin: 6px 0 20px;
+  color: var(--texte-doux);
+  font-size: 14px;
+}
+
+.panneau-menu section {
+  margin-bottom: 18px;
+}
+
+.panneau-menu h2 {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--texte-doux);
+}
+
+.panneau-menu .note {
+  margin: 3px 0 9px;
+  font-size: 12px;
+  color: var(--texte-doux);
+  opacity: 0.75;
+}
+
+.choix {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+#hud .choix button {
+  display: block;
+  text-align: left;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+#hud .choix button.actif {
+  background: rgba(255, 176, 58, 0.16);
+  border-color: var(--accent);
+}
+
+.choix .cran {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--texte-doux);
+}
+
+.choix .titre-choix {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 2px 0 4px;
+}
+
+.choix .detail {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--texte-doux);
+}
+
+.ligne-graine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--texte-doux);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+}
+
+.ligne-graine b {
+  color: var(--texte);
+}
+
+#hud button.grand {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+}
+
+/* ---------- Mode et salon en ligne ---------- */
+
+.choix-mode {
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 18px;
+}
+
+.jauge.adverse {
+  border-color: rgba(255, 123, 138, 0.45);
+}
+
+.jauge.adverse .val {
+  color: var(--vies);
+}
+
+#section-reseau code {
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+#section-reseau .champs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+#section-reseau label,
+#section-reseau .champ-large {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--texte-doux);
+}
+
+#section-reseau input {
+  display: block;
+  width: 100%;
+  margin-top: 3px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--texte);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bord);
+  border-radius: 9px;
+  pointer-events: auto;
+}
+
+#section-reseau input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#btn-connecter {
+  width: 100%;
+}
+
+.etat {
+  margin-top: 9px;
+  padding: 8px 11px;
+  font-size: 12px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--texte-doux);
+}
+
+.etat.ok {
+  color: #7ee08a;
+  background: rgba(126, 224, 138, 0.1);
+}
+
+.etat.ko {
+  color: #ff8a9c;
+  background: rgba(255, 123, 138, 0.12);
+}
+
+#liste-joueurs {
+  list-style: none;
+  margin: 9px 0 0;
+  padding: 0;
+  font-size: 13px;
+}
+
+#liste-joueurs li {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 11px;
+  margin-bottom: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 9px;
+}
+
+#liste-joueurs .pret {
+  color: #7ee08a;
+  font-weight: 700;
+}
+
+#liste-joueurs .attente {
+  color: var(--texte-doux);
+}
+
+/* ---------- Panneau d'armée (1 vs 1) ---------- */
+
+#armee {
+  position: absolute;
+  top: 70px;
+  left: 16px;
+  width: 250px;
+  padding: 13px;
+  background: var(--panneau);
+  border: 1px solid rgba(111, 168, 255, 0.35);
+  border-radius: 14px;
+  box-shadow: var(--ombre);
+  pointer-events: auto;
+}
+
+#armee .titre {
+  font-weight: 700;
+  font-size: 15px;
+  color: #9cc3ff;
+}
+
+#armee .note-armee {
+  margin: 4px 0 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--texte-doux);
+}
+
+.ligne-unite {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 9px;
+  margin-bottom: 6px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--bord);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ligne-unite:hover:not(.inabordable) {
+  border-color: #6fa8ff;
+  background: rgba(111, 168, 255, 0.14);
+}
+
+.ligne-unite.inabordable {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ligne-unite .emoji {
+  font-size: 19px;
+}
+
+.ligne-unite .nom-unite {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.ligne-unite .prix-unite {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--texte-doux);
+}
+
+.ligne-unite .compte {
+  min-width: 30px;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 800;
+  color: #9cc3ff;
+  font-variant-numeric: tabular-nums;
+}
+
+#armee .total {
+  padding-top: 8px;
+  border-top: 1px solid var(--bord);
+  font-size: 12px;
+  color: var(--texte-doux);
+}
+
+/* ---------- Bandeau d'annonce de vague ---------- */
+
+#bandeau {
+  position: absolute;
+  top: 33%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 34px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.7);
+  background: rgba(10, 15, 25, 0.55);
+  border: 1px solid var(--bord);
+  border-radius: 16px;
+  animation: apparait 0.35s ease-out;
+}
+
+#bandeau.boss {
+  color: #ff8a6b;
+}
+
+@keyframes apparait {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* ---------- Écran de fin ---------- */
+
+#fin {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(8, 12, 20, 0.82);
+  pointer-events: auto;
+}
+
+#fin h1 {
+  margin: 0;
+  font-size: 52px;
+}
+
+#fin p {
+  margin: 0;
+  color: var(--texte-doux);
+}
+
+#fin-stats {
+  display: flex;
+  gap: 22px;
+  margin: 6px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+#fin-stats .bloc {
+  text-align: center;
+}
+
+#fin-stats .bloc b {
+  display: block;
+  font-size: 24px;
+}
+
+#fin-stats .bloc span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--texte-doux);
+}
+
+.ligne-fin {
+  display: flex;
+  gap: 10px;
+}
+
+/* ---------- Aide ---------- */
+
+#aide {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  max-width: 300px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--texte-doux);
+  opacity: 0.75;
+}

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Axel\\\\Documents\\\\claude\\\\jeu\"; $sp=\"C:\\\\Users\\\\Axel\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Axel-Documents-claude-jeu\\\\b01dcbe1-6a1a-45fe-a92f-c25d54e02127\\\\scratchpad\"; npx esbuild \"$sp\\\\sim.ts\" --bundle --format=esm --platform=node --outfile=\"$sp\\\\sim.mjs\" --log-level=warning; if \\($?\\) { node \"$sp\\\\sim.mjs\" })"
+    ]
+  }
+}

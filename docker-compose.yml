@@ -1,0 +1,30 @@
+services:
+  jeu:
+    build: .
+    image: nations-defense
+    container_name: game
+    labels:
+      - "traefik.enable=true"
+
+      # --- Routeur : game.alng.fr ---
+      - "traefik.http.routers.game.rule=Host(`game.alng.fr`)"
+      - "traefik.http.routers.game.entrypoints=websecure"
+      - "traefik.http.routers.game.tls=true"
+      - "traefik.http.routers.game.tls.certresolver=myresolver"
+
+      # --- Service ---
+      # Le jeu ET le 1 vs 1 sortent de ce seul port : les fichiers statiques en
+      # HTTP, la partie en ligne via une requête d'upgrade sur /ws. Traefik gère
+      # l'upgrade WebSocket nativement, il n'y a aucun middleware à ajouter.
+      - "traefik.http.services.game.loadbalancer.server.port=8080"
+
+    # Pas de `ports:` : le conteneur n'est joignable que par Traefik, sur le
+    # réseau interne. Rien n'est exposé en direct sur l'hôte.
+    restart: unless-stopped
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    name: traefik
+    external: true

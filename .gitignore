@@ -1,0 +1,32 @@
+# Dépendances
+node_modules/
+
+# Build (regénéré par `npm run build`, et par le Dockerfile au déploiement)
+dist/
+*.tsbuildinfo
+
+# Environnement local
+.env
+.env.*
+!.env.example
+*.local
+
+# Outils et éditeurs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# Systèmes de fichiers
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Journaux
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Volumes montés par docker compose sur le serveur
+volumes/

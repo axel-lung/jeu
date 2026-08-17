@@ -260,6 +260,8 @@ npm run icones        # (re)génère les icônes du jeu et des stores
 npm run mobile:sync   # build web + copie dans les projets Android/iOS
 npm run mobile:android  # ouvre le projet dans Android Studio
 npm run mobile:ios      # ouvre le projet dans Xcode (macOS)
+npm run apk             # APK de test installable (SDK Android requis)
+npm run apk:release     # APK signé, si android/keystore.properties existe
 ```
 
 - **PWA** : `public/manifest.webmanifest` + `public/sw.js`. Une fois « ajouté à l'écran

@@ -100,7 +100,87 @@ forme dans `dessinerLogo()` et relancez les deux commandes.
 
 ---
 
-## 4. Publier sur le Play Store
+## 4. Exporter un APK
+
+Un APK s'installe directement sur un téléphone, sans passer par un store. C'est le
+moyen le plus rapide de tester le jeu sur son propre appareil ou de l'envoyer à
+quelqu'un.
+
+### Prérequis, une seule fois
+
+Il faut le **SDK Android** et un **JDK 21**. Le plus simple est d'installer
+[Android Studio](https://developer.android.com/studio), qui apporte les deux : au
+premier lancement, laissez l'assistant télécharger le SDK, puis fermez-le. Rien
+d'autre à configurer — le projet contient déjà son wrapper Gradle.
+
+Si vous préférez sans Android Studio : les
+[command line tools](https://developer.android.com/studio#command-line-tools-only),
+`sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"`, et
+`ANDROID_HOME` pointant sur le dossier du SDK.
+
+### APK de test (non signé pour le store, installable tout de suite)
+
+```bash
+npm run apk
+```
+
+Sortie : **`android/app/build/outputs/apk/debug/app-debug.apk`**.
+
+Pour l'installer :
+
+- **par câble** : `adb install -r android/app/build/outputs/apk/debug/app-debug.apk` ;
+- **sans câble** : copiez le `.apk` sur le téléphone (mail, cloud, clé USB), ouvrez-le
+  depuis le gestionnaire de fichiers et autorisez « installer des applications
+  inconnues » pour l'application qui le lance.
+
+Cet APK est signé avec la clé de debug d'Android. Il s'installe partout, mais ne peut
+pas être publié sur un store, et il ne se met pas à jour par-dessus un APK de release.
+
+### APK signé (distribution hors store)
+
+1. Créez la clé, une seule fois — **sauvegardez-la**, la perdre interdit toute mise à
+   jour de l'app chez ceux qui l'ont installée :
+   ```bash
+   keytool -genkey -v -keystore android/nations-defense.keystore \
+     -alias nations -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. Déclarez-la :
+   ```bash
+   cp android/keystore.properties.example android/keystore.properties
+   # puis renseignez storePassword / keyPassword
+   ```
+   Ni la clé ni ce fichier ne sont versionnés (`android/.gitignore`).
+3. Construisez :
+   ```bash
+   npm run apk:release
+   ```
+   Sortie : **`android/app/build/outputs/apk/release/app-release.apk`**.
+
+Sans `keystore.properties`, la commande produit quand même un APK, mais **non signé** :
+Android refusera de l'installer. C'est le seul piège de cette étape.
+
+### Sous Windows
+
+Les deux scripts npm utilisent `./gradlew`, qui marche dans Git Bash et WSL. En
+PowerShell ou `cmd`, faites l'équivalent à la main :
+
+```powershell
+npm run mobile:sync
+cd android
+.\gradlew.bat assembleDebug
+```
+
+### À savoir
+
+- Le premier build télécharge Gradle et les dépendances Android : comptez plusieurs
+  minutes. Les suivants prennent quelques dizaines de secondes.
+- Refaites `npm run apk` après **chaque** modification du jeu : l'APK embarque une
+  copie figée du build web.
+- Le Play Store, lui, ne prend pas d'APK mais un **AAB** — voir la section suivante.
+
+---
+
+## 5. Publier sur le Play Store
 
 1. **Identité** : `appId` est `fr.alng.nationsdefense` (`capacitor.config.ts`). Il est
    définitif une fois l'app publiée — changez-le maintenant si besoin, puis
@@ -122,7 +202,7 @@ forme dans `dessinerLogo()` et relancez les deux commandes.
    confidentialité (obligatoire même sans collecte), et le questionnaire « sécurité des
    données » — le jeu ne collecte rien, le pseudo du 1 vs 1 ne quitte pas le salon.
 
-## 5. Publier sur l'App Store
+## 6. Publier sur l'App Store
 
 1. Ouvrez `ios/App/App.xcodeproj` (`npm run mobile:ios` s'en charge).
 2. *Signing & Capabilities* : choisissez votre équipe ; le bundle identifier doit
@@ -137,9 +217,10 @@ L'orientation est déjà verrouillée en paysage des deux côtés :
 
 ---
 
-## 6. Points d'attention
+## 7. Points d'attention
 
-- **Ne pas commiter** `.env`, le keystore Android, ni les certificats iOS.
+- **Ne pas commiter** `.env`, le keystore Android (`android/*.keystore`,
+  `android/keystore.properties`), ni les certificats iOS — ils sont déjà ignorés.
 - `android/app/src/main/assets/public/` et `ios/App/App/public/` sont le build web
   copié : ils sont ignorés par git, `mobile:sync` les régénère.
 - Le mode 1 vs 1 exige `wss://` (TLS) depuis l'app : une WebSocket en clair est

@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+// Signature de release, optionnelle : renseignée par `android/keystore.properties`
+// (non versionné, cf. .gitignore). Sans ce fichier, seul le build debug marche —
+// suffisant pour installer le jeu sur son propre téléphone.
+def fichierCles = rootProject.file('keystore.properties')
+def cles = new Properties()
+if (fichierCles.exists()) {
+    cles.load(new FileInputStream(fichierCles))
+}
+
 android {
     namespace = "fr.alng.nationsdefense"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +25,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (cles.containsKey('storeFile')) {
+                storeFile rootProject.file(cles['storeFile'])
+                storePassword cles['storePassword']
+                keyAlias cles['keyAlias']
+                keyPassword cles['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Sans keystore.properties, on laisse Gradle produire un APK non signé
+            // plutôt que d'échouer : c'est le cas au premier clonage du dépôt.
+            if (cles.containsKey('storeFile')) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

@@ -14,6 +14,8 @@
     "mobile:sync": "npm run build && cap sync",
     "mobile:android": "npm run build && cap sync android && cap open android",
     "mobile:ios": "npm run build && cap sync ios && cap open ios",
+    "apk": "npm run mobile:sync && cd android && ./gradlew assembleDebug",
+    "apk:release": "npm run mobile:sync && cd android && ./gradlew assembleRelease",
     "mobile:assets": "capacitor-assets generate --android --ios --iconBackgroundColor #0e1420 --iconBackgroundColorDark #0e1420 --splashBackgroundColor #0e1420 --splashBackgroundColorDark #0e1420"
   },
   "engines": {

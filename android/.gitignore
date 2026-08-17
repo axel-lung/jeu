@@ -99,3 +99,9 @@ app/src/main/assets/public
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json
 app/src/main/res/xml/config.xml
+
+# Signature de release : la clé et ses mots de passe restent sur la machine qui
+# publie. Perdre la clé interdit toute mise à jour de l'app sur le store.
+keystore.properties
+*.jks
+*.keystore

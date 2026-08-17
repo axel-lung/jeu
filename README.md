@@ -271,6 +271,8 @@ npm run apk:release     # APK signé, si android/keystore.properties existe
   correctif du jeu part du même `src/`.
 - **1 vs 1 depuis l'app** : la page vient du téléphone, pas d'un serveur. L'URL du salon
   est fixée au build par `VITE_SERVEUR_WS` (cf. [`.env.example`](.env.example)).
+- **Sans rien installer** : le workflow [APK Android](.github/workflows/apk.yml) compile
+  l'APK sur les runners GitHub à chaque push, et le dépose en artefact téléchargeable.
 
 La marche à suivre complète — signature, versions, pièces à fournir au Play Store et à
 l'App Store — est dans [MOBILE.md](MOBILE.md).

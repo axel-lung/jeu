@@ -159,6 +159,32 @@ pas être publié sur un store, et il ne se met pas à jour par-dessus un APK de
 Sans `keystore.properties`, la commande produit quand même un APK, mais **non signé** :
 Android refusera de l'installer. C'est le seul piège de cette étape.
 
+### Compiler l'APK dans GitHub Actions (sans rien installer)
+
+Le workflow [`.github/workflows/apk.yml`](.github/workflows/apk.yml) fabrique l'APK
+sur les runners GitHub, qui embarquent déjà le SDK Android. Il part à chaque push sur
+`main` et sur les branches `claude/**`, et peut aussi se lancer à la main depuis
+l'onglet **Actions → APK Android → Run workflow**.
+
+L'APK se récupère en bas de la page de l'exécution, dans **Artifacts**. GitHub le sert
+dans un `.zip` : il faut le décompresser avant de l'installer.
+
+Pour un APK **signé** depuis la CI, ajoutez quatre secrets au dépôt
+(*Settings → Secrets and variables → Actions*) :
+
+| Secret | Contenu |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | `base64 -w0 android/nations-defense.keystore` |
+| `ANDROID_KEYSTORE_PASSWORD` | mot de passe du keystore |
+| `ANDROID_KEY_ALIAS` | l'alias (`nations` par défaut) |
+| `ANDROID_KEY_PASSWORD` | mot de passe de la clé |
+
+puis lancez le workflow avec la variante `release`. La clé est reconstruite le temps du
+build et effacée juste après, même si le build échoue.
+
+La variable de dépôt `VITE_SERVEUR_WS` (*Variables*, pas *Secrets*) fixe l'URL du salon
+1 vs 1 embarquée dans l'app ; sans elle, le code retombe sur `SERVEUR_PUBLIC`.
+
 ### Sous Windows
 
 Les deux scripts npm utilisent `./gradlew`, qui marche dans Git Bash et WSL. En

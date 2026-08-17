@@ -1,0 +1,114 @@
+name: APK Android
+
+# Les runners GitHub embarquent déjà le SDK Android : c'est le seul endroit où
+# l'APK se fabrique sans rien installer. Le build part du même `npm run build`
+# que le site, puis Capacitor recopie `dist/` dans le projet natif.
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+    inputs:
+      variante:
+        description: "debug (installable tout de suite) ou release (exige les secrets de signature)"
+        type: choice
+        default: debug
+        options: [debug, release]
+
+# Un seul build à la fois par branche : le suivant annule le précédent.
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  construire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      VARIANTE: ${{ inputs.variante || 'debug' }}
+      # Le 1 vs 1 depuis l'app a besoin d'une URL absolue : la page vient du
+      # téléphone, pas d'un serveur. Définissez la variable de dépôt
+      # VITE_SERVEUR_WS pour surcharger la valeur par défaut du code.
+      VITE_SERVEUR_WS: ${{ vars.VITE_SERVEUR_WS }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Construire le jeu et le recopier dans le projet Android
+        # `cap sync android` explicitement : `cap sync` tout court toucherait
+        # aussi au projet iOS, qui ne peut pas se mettre à jour hors macOS.
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Préparer la clé de signature
+        if: env.VARIANTE == 'release'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Build release demandé mais le secret ANDROID_KEYSTORE_BASE64 est absent." \
+                 "Voir MOBILE.md, section « Compiler l'APK dans GitHub Actions »."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/signature.keystore
+          cat > android/keystore.properties <<PROPS
+          storeFile=signature.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          PROPS
+
+      - name: Compiler l'APK
+        working-directory: android
+        run: |
+          if [ "$VARIANTE" = "release" ]; then
+            ./gradlew --no-daemon assembleRelease
+          else
+            ./gradlew --no-daemon assembleDebug
+          fi
+
+      - name: Effacer la clé du disque
+        # `always()` : la clé ne doit pas survivre à un build raté non plus.
+        if: always() && env.VARIANTE == 'release'
+        run: rm -f android/signature.keystore android/keystore.properties
+
+      - name: Résumer le résultat
+        run: |
+          APK=$(find android/app/build/outputs/apk -name '*.apk' | head -1)
+          echo "APK=$APK" >> "$GITHUB_ENV"
+          {
+            echo "### APK $VARIANTE prêt"
+            echo ""
+            echo "- Fichier : \`$(basename "$APK")\` ($(du -h "$APK" | cut -f1))"
+            echo "- À récupérer dans les artefacts de cette exécution, en bas de page."
+            if [ "$VARIANTE" = "debug" ]; then
+              echo "- Signé avec la clé de debug d'Android : installable directement," \
+                   "mais pas publiable sur un store."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nations-defense-${{ env.VARIANTE }}-${{ github.run_number }}
+          path: ${{ env.APK }}
+          if-no-files-found: error
+          retention-days: 30

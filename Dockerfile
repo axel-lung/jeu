@@ -16,6 +16,8 @@ RUN npm ci
 
 COPY tsconfig.json vite.config.ts index.html ./
 COPY src ./src
+# Manifeste PWA, service worker et icônes : Vite les recopie tels quels dans dist/.
+COPY public ./public
 
 # `npm run build` = vérification des types + bundle. Le build échoue donc si le
 # TypeScript ne compile pas : on ne déploie jamais une image qui ne type-check pas.

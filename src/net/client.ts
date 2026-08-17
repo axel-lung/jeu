@@ -1,3 +1,4 @@
+import { estAppNative } from '../core/mobile';
 import type { TypeUnite } from '../game/army';
 import type { Instantane } from './snapshot';
 import {
@@ -11,6 +12,13 @@ import {
 } from './protocole';
 
 export type EtatReseau = 'hors-ligne' | 'connexion' | 'salon' | 'partie' | 'erreur';
+
+/**
+ * Serveur visé par défaut depuis l'app native, où la page ne vient pas d'un
+ * serveur. À changer si le jeu est déployé ailleurs (ou surchargé au build avec
+ * `VITE_SERVEUR_WS`, cf. `.env.example`).
+ */
+const SERVEUR_PUBLIC = 'wss://game.alng.fr';
 
 export interface EcouteursReseau {
   onSalon?: (joueurs: JoueurSalon[], maPlace: number, code: string) => void;
@@ -48,8 +56,15 @@ export class Reseau {
   /**
    * URL par défaut : la même origine que la page. On suit son protocole, sinon
    * une page en https refuserait une socket en clair (contenu mixte).
+   *
+   * Sauf dans l'app installée sur les stores : là, la page vient du bundle local
+   * (`capacitor://localhost`), il n'y a aucun serveur en face. On vise alors le
+   * serveur public, réglable au build via `VITE_SERVEUR_WS`.
    */
   static urlParDefaut(): string {
+    const configure = import.meta.env.VITE_SERVEUR_WS;
+    if (configure) return configure;
+    if (estAppNative()) return `${SERVEUR_PUBLIC}${CHEMIN_WS}`;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     return `${proto}://${location.host || `localhost:${location.port || 80}`}${CHEMIN_WS}`;
   }

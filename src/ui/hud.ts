@@ -60,6 +60,8 @@ export interface RappelsHud {
   onPret: (pret: boolean) => void;
   /** L'hôte a changé un réglage : à pousser à l'adversaire. */
   onReglages: () => void;
+  /** Zoom demandé par les boutons tactiles (facteur > 1 = rapprocher). */
+  onZoom: (facteur: number) => void;
 }
 
 function el<T extends HTMLElement>(id: string): T {
@@ -147,6 +149,11 @@ export class Hud {
   private readonly btnVendre = el<HTMLButtonElement>('btn-vendre');
   private readonly bandeau = el<HTMLElement>('bandeau');
 
+  private readonly panneauTactile = el<HTMLElement>('tactile');
+  private readonly btnZoomPlus = el<HTMLButtonElement>('btn-zoom-plus');
+  private readonly btnZoomMoins = el<HTMLButtonElement>('btn-zoom-moins');
+  private readonly btnAnnuler = el<HTMLButtonElement>('btn-annuler');
+
   private readonly menu = el<HTMLElement>('menu');
   private readonly choixFerme = el<HTMLElement>('choix-ferme');
   private readonly choixCarte = el<HTMLElement>('choix-carte');
@@ -196,6 +203,8 @@ export class Hud {
 
   /** Mode choisi dans le menu, avant que la partie ne démarre. */
   mode: Mode = 'solo';
+  /** Vrai sur un appareil tactile : la palette de gestes de secours s'affiche. */
+  tactile = false;
   /** Explication de fin fournie par le serveur en duel. */
   raisonFin = '';
   /** Vrai quand le joueur s'est annoncé prêt dans le salon. */
@@ -332,6 +341,14 @@ export class Hud {
       });
     }
 
+    // Palette tactile : ce que le doigt ne peut pas exprimer (molette, clic droit).
+    this.btnZoomPlus.addEventListener('click', () => this.rappels.onZoom(1.25));
+    this.btnZoomMoins.addEventListener('click', () => this.rappels.onZoom(0.8));
+    this.btnAnnuler.addEventListener('click', () => {
+      if (g.outil) g.outil = null;
+      else g.selection = null;
+    });
+
     this.btnUpgrade.addEventListener('click', () => {
       if (g.selection?.cat === 'tour') g.ameliorer(g.selection.tour);
     });
@@ -399,11 +416,16 @@ export class Hud {
     const g = this.game;
     const auMenu = g.phase === 'menu';
 
+    const fini = g.phase === 'victoire' || g.phase === 'defaite';
+
     this.menu.hidden = !auMenu;
     this.barreHaut.hidden = auMenu;
     this.boutique.hidden = auMenu;
     this.aide.hidden = auMenu;
     this.progression.hidden = auMenu;
+    this.panneauTactile.hidden = !this.tactile || auMenu || fini;
+    // Le bouton d'annulation s'allume quand il y a effectivement quelque chose à annuler.
+    this.btnAnnuler.classList.toggle('actif', g.outil !== null || g.selection !== null);
 
     if (auMenu) {
       this.majMenu();

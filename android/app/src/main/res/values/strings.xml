@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nations Defense</string>
+    <string name="title_activity_main">Nations Defense</string>
+    <string name="package_name">fr.alng.nationsdefense</string>
+    <string name="custom_url_scheme">fr.alng.nationsdefense</string>
+</resources>

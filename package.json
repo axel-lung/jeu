@@ -9,12 +9,22 @@
     "preview": "vite preview",
     "check": "tsc --noEmit",
     "serveur": "node server/serveur.mjs",
-    "start": "node server/serveur.mjs"
+    "start": "node server/serveur.mjs",
+    "icones": "node scripts/generer-icones.mjs",
+    "mobile:sync": "npm run build && cap sync",
+    "mobile:android": "npm run build && cap sync android && cap open android",
+    "mobile:ios": "npm run build && cap sync ios && cap open ios",
+    "mobile:assets": "capacitor-assets generate --android --ios --iconBackgroundColor #0e1420 --iconBackgroundColorDark #0e1420 --splashBackgroundColor #0e1420 --splashBackgroundColorDark #0e1420"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
     "typescript": "^7.0.2",
     "vite": "^8.2.1"
   },

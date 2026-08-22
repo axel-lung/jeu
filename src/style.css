@@ -669,6 +669,14 @@ body {
   color: var(--texte-doux);
 }
 
+/* La rangée porte l'espacement : au doigt elle accueille un bouton « retirer »
+   à côté de la ligne, faute de clic droit. */
+.rangee-unite {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
 .ligne-unite {
   display: grid;
   grid-template-columns: 26px 1fr auto;
@@ -676,7 +684,6 @@ body {
   gap: 8px;
   width: 100%;
   padding: 8px 9px;
-  margin-bottom: 6px;
   text-align: left;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--bord);
@@ -1268,5 +1275,548 @@ body {
   .ligne-fin {
     flex-wrap: wrap;
     justify-content: center;
+  }
+}
+
+/* ================================================================== */
+/*  Éléments partagés introduits par la refonte mobile                 */
+/*  Ils existent dans le DOM sur toutes les plateformes, mais ne       */
+/*  s'affichent qu'au doigt : le bureau reste rigoureusement identique.*/
+/* ================================================================== */
+
+/* Commandes qui n'ont de sens qu'au doigt (fermetures, barre du bas…). */
+.mobile-seul {
+  display: none;
+}
+
+/* Pastille d'état repliée : mobile uniquement. */
+#statut {
+  display: none;
+}
+
+/* En-tête de la boutique. Sur grand écran elle ne contient que les onglets. */
+.tete-boutique {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* Le second jeu de jauges, montré dans la feuille de boutique au doigt. */
+#ressources-boutique {
+  display: none;
+}
+
+/* Les deux colonnes du menu ne se matérialisent qu'en paysage mobile. */
+.colonne-menu {
+  display: contents;
+}
+
+/* ================================================================== */
+/*  Refonte mobile : le HUD est replié, la carte occupe l'écran        */
+/*                                                                     */
+/*  Sur un téléphone la place est la ressource rare. Tout le HUD se    */
+/*  ramène donc à deux ancrages permanents — une pastille d'état en    */
+/*  haut à gauche, une barre de boutons en bas à droite — et chaque    */
+/*  panneau (boutique, armée, sélection, état détaillé) monte en       */
+/*  feuille à la demande puis s'efface. Une seule feuille à la fois.   */
+/*                                                                     */
+/*  `body.hud-mobile` est posée par `main.ts` sur un appareil au doigt */
+/*  sans survol : rien de cette section n'atteint la souris.           */
+/* ================================================================== */
+
+@keyframes feuille-monte {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes feuille-descend {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Pastille d'état (haut gauche) ---------- */
+
+body.hud-mobile #hud #statut {
+  position: absolute;
+  top: calc(8px + env(safe-area-inset-top));
+  left: calc(8px + env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Assez haute pour être touchée sans viser, assez fine pour ne pas mordre
+     sur la carte. */
+  min-height: 38px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: rgba(14, 20, 32, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--ombre);
+}
+
+body.hud-mobile #statut .bloc-statut {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+body.hud-mobile #statut .icone {
+  font-size: 12px;
+}
+
+body.hud-mobile #statut .accent {
+  color: var(--accent);
+}
+
+/* Pendant l'assaut la pastille vire au rouge : c'est le seul signal d'état
+   permanent qui reste à l'écran. */
+body.hud-mobile #statut.assaut {
+  border-color: rgba(255, 123, 138, 0.55);
+}
+
+body.hud-mobile #statut.assaut .accent {
+  color: var(--vies);
+}
+
+body.hud-mobile #statut.danger .bloc-statut:first-child {
+  color: var(--vies);
+}
+
+body.hud-mobile #statut .chevron {
+  font-size: 9px;
+  color: var(--texte-doux);
+  transition: transform 0.15s;
+}
+
+body.hud-mobile.statut-ouvert #statut .chevron {
+  transform: rotate(180deg);
+}
+
+/* ---------- Barre du haut : dépliée seulement sur demande ---------- */
+
+body.hud-mobile #barre-haut {
+  display: none;
+}
+
+body.hud-mobile.statut-ouvert #barre-haut {
+  display: flex;
+  top: calc(54px + env(safe-area-inset-top));
+  left: calc(8px + env(safe-area-inset-left));
+  right: auto;
+  max-width: calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right));
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 6px;
+  padding: 10px;
+  background: rgba(14, 20, 32, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--bord);
+  border-radius: 18px;
+  box-shadow: var(--ombre);
+  pointer-events: auto;
+  animation: feuille-descend 0.16s ease-out;
+}
+
+/* Zone et vitesse vivent dans la barre du bas : les répéter ici est du bruit. */
+body.hud-mobile #barre-haut .ecart,
+body.hud-mobile #barre-haut .actions-barre {
+  display: none;
+}
+
+body.hud-mobile #ressources {
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-right: 0;
+  margin-right: 0;
+  border-right: none;
+}
+
+/* Le panneau déplié est justement l'endroit du détail : on y remet ce que la
+   mise en page compacte sacrifie quand l'écran est très court. */
+body.hud-mobile.statut-ouvert #barre-haut .jauge .taux,
+body.hud-mobile.statut-ouvert #barre-haut #jauge-temps {
+  display: flex;
+}
+
+/* ---------- Barre du bas : les seules commandes permanentes ---------- */
+
+body.hud-mobile #tactile {
+  left: auto;
+  right: calc(10px + env(safe-area-inset-right));
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  /* En DOM les commandes vont du plus utile au moins utile ; à l'écran on les
+     inverse pour que « construire » tombe sous le pouce, au bord. */
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 8px;
+}
+
+body.hud-mobile #hud #tactile button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  min-height: 46px;
+  font-size: 18px;
+  /* Coins arrondis plutôt que ronds : les pictogrammes y respirent mieux. */
+  border-radius: 15px;
+  background: rgba(14, 20, 32, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+body.hud-mobile #hud #tactile #btn-boutique {
+  width: 58px;
+  height: 58px;
+  font-size: 25px;
+  background: linear-gradient(180deg, #ffc55c, #f08a1d);
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow: 0 6px 20px rgba(240, 138, 29, 0.35);
+}
+
+body.hud-mobile #hud #tactile #btn-boutique.actif,
+body.hud-mobile #hud #tactile #btn-armee-dock.actif {
+  border-color: var(--texte);
+}
+
+/* Outil en main : la boutique s'efface derrière le geste en cours. */
+body.hud-mobile #hud #tactile #btn-boutique.outil-en-main {
+  opacity: 0.55;
+}
+
+/* L'annulation n'apparaît que lorsqu'il y a quelque chose à annuler. */
+body.hud-mobile #hud #tactile #btn-annuler {
+  display: none;
+}
+
+body.hud-mobile #hud #tactile #btn-annuler.actif {
+  display: flex;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(255, 176, 58, 0.18);
+}
+
+/* ---------- Boutique : feuille montante ---------- */
+
+body.hud-mobile #boutique {
+  display: none;
+}
+
+body.hud-mobile.boutique-ouverte #boutique {
+  display: flex;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: none;
+  transform: none;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom))
+    calc(12px + env(safe-area-inset-left));
+  background: linear-gradient(180deg, rgba(16, 22, 35, 0.88), rgba(10, 14, 24, 0.97));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--bord);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  animation: feuille-monte 0.18s ease-out;
+}
+
+/* La feuille prend le bas de l'écran : la barre du bas s'efface le temps du choix. */
+body.hud-mobile.boutique-ouverte #tactile {
+  display: none;
+}
+
+body.hud-mobile .tete-boutique {
+  justify-content: flex-start;
+}
+
+body.hud-mobile #ressources-boutique {
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+body.hud-mobile #ressources-boutique::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ici seul le stock compte : on choisit ce qu'on peut payer maintenant. */
+body.hud-mobile #ressources-boutique .taux {
+  display: none;
+}
+
+body.hud-mobile #ressources-boutique .jauge {
+  padding: 4px 9px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+
+body.hud-mobile.boutique-ouverte .carte {
+  width: 152px;
+  padding: 8px 10px;
+  border-radius: 14px;
+}
+
+body.hud-mobile.boutique-ouverte .carte .nom,
+body.hud-mobile.boutique-ouverte .carte .prix {
+  font-size: 12.5px;
+}
+
+body.hud-mobile.boutique-ouverte #cartes {
+  max-width: none;
+  width: 100%;
+  gap: 8px;
+  padding: 2px 0;
+  scrollbar-width: none;
+}
+
+body.hud-mobile #cartes::-webkit-scrollbar {
+  display: none;
+}
+
+body.hud-mobile #onglets {
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+
+/* ---------- Sélection et armée : feuilles en bas à gauche ---------- */
+
+body.hud-mobile #panneau,
+body.hud-mobile #armee {
+  top: auto;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  left: calc(10px + env(safe-area-inset-left));
+  right: auto;
+  width: min(330px, 62vw);
+  max-height: calc(100dvh - 84px);
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(14, 20, 32, 0.93);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: feuille-monte 0.18s ease-out;
+}
+
+/* L'armée ne s'ouvre qu'au bouton, et remplace la fiche de sélection : deux
+   feuilles à la fois, c'est de nouveau la carte cachée. */
+body.hud-mobile #armee {
+  display: none;
+}
+
+body.hud-mobile.armee-ouverte #armee {
+  display: block;
+}
+
+body.hud-mobile.armee-ouverte #panneau,
+body.hud-mobile.boutique-ouverte #panneau {
+  display: none;
+}
+
+body.hud-mobile #panneau .titre,
+body.hud-mobile #armee .titre {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+body.hud-mobile #hud .ferme {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  font-size: 14px;
+  border-radius: 11px;
+}
+
+body.hud-mobile #hud .retirer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  border-radius: 10px;
+}
+
+/* Le clic droit n'existant pas au doigt, la consigne qui l'explique non plus. */
+body.hud-mobile #armee .note-armee {
+  display: none;
+}
+
+/* ---------- Ce qui disparaît au doigt ---------- */
+
+/* Les gestes sont rappelés dans MOBILE.md et se découvrent en une partie : la
+   ligne d'aide, elle, mangeait le bas de l'écran en permanence. */
+body.hud-mobile #aide {
+  display: none;
+}
+
+body.hud-mobile #bandeau {
+  top: 22%;
+  padding: 8px 18px;
+  font-size: 19px;
+  border-radius: 14px;
+}
+
+/* ---------- Menu de démarrage : deux colonnes en paysage ---------- */
+
+body.hud-mobile #menu {
+  align-items: flex-start;
+  padding: calc(10px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right))
+    calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+}
+
+body.hud-mobile .panneau-menu {
+  width: 100%;
+  display: grid;
+  /* La colonne des réglages reçoit un peu plus que la moitié : ses trois crans
+     de difficulté sont ce qui casse en premier sur un 568 px de large. */
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-content: start;
+  column-gap: 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
+body.hud-mobile .colonne-menu {
+  display: block;
+  min-width: 0;
+}
+
+body.hud-mobile #hud #btn-jouer {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+/* Réglages : une carte de difficulté doit se toucher sans viser. */
+body.hud-mobile #hud .choix button {
+  min-height: 56px;
+  padding: 9px 8px;
+  border-radius: 14px;
+}
+
+/* Deux colonnes divisent la largeur disponible : sans `minmax(0, …)` les trois
+   crans de difficulté refusent de se resserrer et débordent de l'écran. */
+body.hud-mobile .choix {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+body.hud-mobile .choix-mode {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.hud-mobile .choix .titre-choix {
+  font-size: 12.5px;
+  /* Dernier recours sur un écran de 320 px de haut : mieux vaut « Abon-dante »
+     coupé que débordant. */
+  overflow-wrap: anywhere;
+}
+
+body.hud-mobile .choix .cran {
+  font-size: 9px;
+}
+
+/* Le menu défile verticalement ; de côté, il n'y a rien à aller chercher. */
+body.hud-mobile #menu {
+  overflow-x: hidden;
+}
+
+body.hud-mobile .panneau-menu section {
+  margin-bottom: 10px;
+}
+
+body.hud-mobile #hud #section-reseau input {
+  min-height: 40px;
+}
+
+/* Sur les plus petits paysages (un iPhone SE fait 568 px de large), le menu
+   n'a plus la place de ses tailles nominales : on resserre plutôt que de
+   laisser les crans de difficulté se couper au milieu d'un mot. */
+@media (max-width: 620px) {
+  body.hud-mobile .panneau-menu h1 {
+    font-size: 21px;
+  }
+
+  body.hud-mobile .choix .titre-choix {
+    font-size: 11.5px;
+  }
+
+  body.hud-mobile #hud .choix button {
+    padding: 8px 7px;
+  }
+}
+
+/* ---------- Écran de fin ---------- */
+
+body.hud-mobile #fin {
+  gap: 10px;
+  padding: 0 16px;
+}
+
+body.hud-mobile #fin h1 {
+  font-size: 27px;
+}
+
+body.hud-mobile #fin-stats {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+body.hud-mobile #hud .ligne-fin button {
+  min-height: 50px;
+  padding: 12px 20px;
+  font-size: 15px;
+}
+
+/* ---------- Invitation au paysage ---------- */
+
+body.hud-mobile #rotation {
+  background: radial-gradient(120% 90% at 50% 0%, #16203a, var(--fond));
+}
+
+/* Les feuilles glissent ; qui préfère l'immobilité les reçoit posées. */
+@media (prefers-reduced-motion: reduce) {
+  body.hud-mobile #barre-haut,
+  body.hud-mobile #boutique,
+  body.hud-mobile #panneau,
+  body.hud-mobile #armee {
+    animation: none;
   }
 }

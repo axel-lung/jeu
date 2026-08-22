@@ -32,6 +32,19 @@
       <div id="hud">
         <div id="progression"><div id="progression-fill"></div></div>
 
+        <!--
+          Mobile : l'état tient dans une pastille (vies, vague, compte à rebours).
+          Un tap déplie la barre complète — le reste du temps la carte est libre.
+        -->
+        <button id="statut" hidden aria-expanded="false" aria-controls="barre-haut">
+          <span class="bloc-statut"><span class="icone">❤️</span><span id="st-vies">0</span></span>
+          <span class="bloc-statut"><span class="icone">🌊</span><span id="st-vague">0/10</span></span>
+          <span class="bloc-statut accent"
+            ><span class="icone">⏳</span><span id="st-compteur">—</span></span
+          >
+          <span class="chevron">▾</span>
+        </button>
+
         <header id="barre-haut">
           <div id="ressources"></div>
 
@@ -66,6 +79,9 @@
           <div class="titre">
             <span id="pan-nom">—</span>
             <span id="pan-sous" class="pays"></span>
+            <button id="btn-fermer-panneau" class="ferme mobile-seul" aria-label="Fermer">
+              ✕
+            </button>
           </div>
           <div id="pan-niveau" class="niveau"></div>
           <div id="pan-stats" class="stats"></div>
@@ -80,6 +96,7 @@
         <aside id="armee" hidden>
           <div class="titre">
             <span>⚔ Armée à envoyer</span>
+            <button id="btn-fermer-armee" class="ferme mobile-seul" aria-label="Fermer">✕</button>
           </div>
           <p class="note-armee">
             Part sur l’adversaire au lancement de la vague. Clic droit sur une ligne
@@ -90,9 +107,16 @@
         </aside>
 
         <footer id="boutique">
-          <div id="onglets">
-            <button class="onglet actif" data-onglet="defense">⚔ Défense</button>
-            <button class="onglet" data-onglet="ferme">🌾 Ferme</button>
+          <div class="tete-boutique">
+            <div id="onglets">
+              <button class="onglet actif" data-onglet="defense">⚔ Défense</button>
+              <button class="onglet" data-onglet="ferme">🌾 Ferme</button>
+            </div>
+            <!-- Le stock, montré là où on le dépense. Mobile uniquement. -->
+            <div id="ressources-boutique"></div>
+            <button id="btn-fermer-boutique" class="ferme mobile-seul" aria-label="Fermer">
+              ✕
+            </button>
           </div>
           <div id="cartes"></div>
         </footer>
@@ -104,6 +128,34 @@
           (clic droit, molette). Affichée par le JS au premier contact tactile.
         -->
         <div id="tactile" hidden>
+          <button id="btn-boutique" class="mobile-seul" title="Construire" aria-label="Construire">
+            🛒
+          </button>
+          <button
+            id="btn-armee-dock"
+            class="mobile-seul"
+            hidden
+            title="Armée à envoyer"
+            aria-label="Armée à envoyer"
+          >
+            ⚔
+          </button>
+          <button
+            id="btn-zone-dock"
+            class="mobile-seul"
+            title="Changer de zone"
+            aria-label="Changer de zone"
+          >
+            🌾
+          </button>
+          <button
+            id="btn-vitesse-dock"
+            class="mobile-seul"
+            title="Vitesse de jeu"
+            aria-label="Vitesse de jeu"
+          >
+            1×
+          </button>
           <button id="btn-zoom-plus" title="Zoomer" aria-label="Zoomer">＋</button>
           <button id="btn-zoom-moins" title="Dézoomer" aria-label="Dézoomer">－</button>
           <button id="btn-annuler" title="Annuler la sélection" aria-label="Annuler">✕</button>
@@ -123,60 +175,64 @@
         <!-- Menu de démarrage : la carte générée reste visible derrière. -->
         <div id="menu">
           <div class="panneau-menu">
-            <h1>Nations Defense</h1>
-            <p class="accroche">
-              Tower defense &times; gestion. Tenez 10 vagues : la ferme paie la défense.
-            </p>
+            <div class="colonne-menu">
+              <h1>Nations Defense</h1>
+              <p class="accroche">
+                Tower defense &times; gestion. Tenez 10 vagues : la ferme paie la défense.
+              </p>
 
-            <div class="choix choix-mode" id="choix-mode">
-              <button data-mode="solo" class="actif">
-                <span class="cran">Hors ligne</span>
-                <span class="titre-choix">Solo</span>
-                <span class="detail">Tenez les 10 vagues tout seul.</span>
-              </button>
-              <button data-mode="duel">
-                <span class="cran">En ligne</span>
-                <span class="titre-choix">1 vs 1</span>
-                <span class="detail">
-                  Chacun sa carte et sa ferme. Préparez une armée et balancez-la sur
-                  l’autre avant chaque vague.
-                </span>
-              </button>
+              <div class="choix choix-mode" id="choix-mode">
+                <button data-mode="solo" class="actif">
+                  <span class="cran">Hors ligne</span>
+                  <span class="titre-choix">Solo</span>
+                  <span class="detail">Tenez les 10 vagues tout seul.</span>
+                </button>
+                <button data-mode="duel">
+                  <span class="cran">En ligne</span>
+                  <span class="titre-choix">1 vs 1</span>
+                  <span class="detail">
+                    Chacun sa carte et sa ferme. Préparez une armée et balancez-la sur
+                    l’autre avant chaque vague.
+                  </span>
+                </button>
+              </div>
             </div>
 
-            <section id="section-reseau" hidden>
-              <h2>Salon en ligne</h2>
-              <p class="note">
-                Lancez le serveur avec <code>npm run serveur</code>, puis entrez le même
-                code de salon des deux côtés.
-              </p>
-              <div class="champs">
-                <label>Pseudo<input id="in-pseudo" maxlength="16" value="Joueur" /></label>
-                <label>Salon<input id="in-salon" maxlength="8" value="AXEL" /></label>
+            <div class="colonne-menu">
+              <section id="section-reseau" hidden>
+                <h2>Salon en ligne</h2>
+                <p class="note">
+                  Lancez le serveur avec <code>npm run serveur</code>, puis entrez le même
+                  code de salon des deux côtés.
+                </p>
+                <div class="champs">
+                  <label>Pseudo<input id="in-pseudo" maxlength="16" value="Joueur" /></label>
+                  <label>Salon<input id="in-salon" maxlength="8" value="AXEL" /></label>
+                </div>
+                <label class="champ-large"
+                  >Serveur<input id="in-serveur" /></label
+                >
+                <button id="btn-connecter">Se connecter</button>
+                <div id="etat-reseau" class="etat">Hors ligne</div>
+                <ul id="liste-joueurs"></ul>
+              </section>
+
+              <section>
+                <h2>Difficulté de la ferme</h2>
+                <p class="note">Nombre de spots de récolte, stock de départ et prix.</p>
+                <div class="choix" id="choix-ferme"></div>
+              </section>
+
+              <section>
+                <h2>Difficulté de la carte</h2>
+                <p class="note">Longueur du chemin, donc temps de tir pour vos tours.</p>
+                <div class="choix" id="choix-carte"></div>
+              </section>
+
+              <div class="ligne-graine">
+                <span>Carte n° <b id="val-graine">1</b> · <b id="val-longueur">—</b></span>
+                <button id="btn-graine">🎲 Autre carte</button>
               </div>
-              <label class="champ-large"
-                >Serveur<input id="in-serveur" /></label
-              >
-              <button id="btn-connecter">Se connecter</button>
-              <div id="etat-reseau" class="etat">Hors ligne</div>
-              <ul id="liste-joueurs"></ul>
-            </section>
-
-            <section>
-              <h2>Difficulté de la ferme</h2>
-              <p class="note">Nombre de spots de récolte, stock de départ et prix.</p>
-              <div class="choix" id="choix-ferme"></div>
-            </section>
-
-            <section>
-              <h2>Difficulté de la carte</h2>
-              <p class="note">Longueur du chemin, donc temps de tir pour vos tours.</p>
-              <div class="choix" id="choix-carte"></div>
-            </section>
-
-            <div class="ligne-graine">
-              <span>Carte n° <b id="val-graine">1</b> · <b id="val-longueur">—</b></span>
-              <button id="btn-graine">🎲 Autre carte</button>
             </div>
 
             <button id="btn-jouer" class="principal grand">Lancer la partie</button>

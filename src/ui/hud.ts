@@ -137,9 +137,14 @@ export class Hud {
   private readonly jaugeCompteur = el<HTMLElement>('jauge-compteur');
   private readonly btnZone = el<HTMLButtonElement>('btn-zone');
   private readonly btnVitesse = el<HTMLButtonElement>('btn-vitesse');
+  private readonly statut = el<HTMLButtonElement>('statut');
+  private readonly stVies = el<HTMLElement>('st-vies');
+  private readonly stVague = el<HTMLElement>('st-vague');
+  private readonly stCompteur = el<HTMLElement>('st-compteur');
   private readonly onglets = el<HTMLElement>('onglets');
   private readonly cartes = el<HTMLElement>('cartes');
   private readonly boutique = el<HTMLElement>('boutique');
+  private readonly ressourcesBoutique = el<HTMLElement>('ressources-boutique');
   private readonly aide = el<HTMLElement>('aide');
   private readonly panneau = el<HTMLElement>('panneau');
   private readonly panNom = el<HTMLSpanElement>('pan-nom');
@@ -156,6 +161,13 @@ export class Hud {
   private readonly btnZoomPlus = el<HTMLButtonElement>('btn-zoom-plus');
   private readonly btnZoomMoins = el<HTMLButtonElement>('btn-zoom-moins');
   private readonly btnAnnuler = el<HTMLButtonElement>('btn-annuler');
+  private readonly btnBoutique = el<HTMLButtonElement>('btn-boutique');
+  private readonly btnArmeeDock = el<HTMLButtonElement>('btn-armee-dock');
+  private readonly btnZoneDock = el<HTMLButtonElement>('btn-zone-dock');
+  private readonly btnVitesseDock = el<HTMLButtonElement>('btn-vitesse-dock');
+  private readonly btnFermerBoutique = el<HTMLButtonElement>('btn-fermer-boutique');
+  private readonly btnFermerPanneau = el<HTMLButtonElement>('btn-fermer-panneau');
+  private readonly btnFermerArmee = el<HTMLButtonElement>('btn-fermer-armee');
 
   private readonly menu = el<HTMLElement>('menu');
   private readonly choixFerme = el<HTMLElement>('choix-ferme');
@@ -186,7 +198,8 @@ export class Hud {
   private readonly btnRejouer = el<HTMLButtonElement>('btn-rejouer');
   private readonly btnMenu = el<HTMLButtonElement>('btn-menu');
 
-  private readonly jauges = new Map<TypeRessource, { val: HTMLElement; taux: HTMLElement }>();
+  /** Un jeu de jauges par conteneur : la barre du haut, et la feuille de boutique. */
+  private readonly jauges: Map<TypeRessource, { val: HTMLElement; taux: HTMLElement }>[] = [];
   private readonly boutonsFerme = new Map<NiveauFerme, HTMLButtonElement>();
   private readonly boutonsCarte = new Map<NiveauCarte, HTMLButtonElement>();
 
@@ -198,12 +211,19 @@ export class Hud {
   }[] = [];
   private readonly lignesArmee = new Map<
     TypeUnite,
-    { noeud: HTMLElement; prix: HTMLElement; compte: HTMLElement }
+    { noeud: HTMLElement; prix: HTMLElement; compte: HTMLElement; retirer: HTMLButtonElement }
   >();
 
   private zoneAffichee: ZoneBoutique | null = null;
   private signaturePanneau = '';
   private dernierBandeau = '';
+  /**
+   * Feuilles ouvertes sur mobile. Le HUD y est replié par défaut : rien ne
+   * couvre la carte tant que le joueur n'a pas demandé un panneau.
+   */
+  private boutiqueOuverte = false;
+  private armeeOuverte = false;
+  private statutOuvert = false;
 
   /** Mode choisi dans le menu, avant que la partie ne démarre. */
   mode: Mode = 'solo';
@@ -232,17 +252,24 @@ export class Hud {
   }
 
   private construireJauges(): void {
-    for (const r of RESSOURCES) {
-      const info = INFOS[r];
-      const d = document.createElement('div');
-      d.className = 'jauge';
-      d.title = `${info.nom} — ${info.usage}`;
-      d.innerHTML = `<span class="icone">${info.icone}</span><span class="val"></span><span class="taux"></span>`;
-      const val = d.querySelector('.val') as HTMLElement;
-      const taux = d.querySelector('.taux') as HTMLElement;
-      val.style.color = info.couleur;
-      this.ressources.appendChild(d);
-      this.jauges.set(r, { val, taux });
+    // Le stock est utile à deux endroits : dans la barre d'état, et dans la
+    // boutique où on le dépense — sur mobile c'est le seul des deux qui est
+    // visible au moment de choisir une carte.
+    for (const conteneur of [this.ressources, this.ressourcesBoutique]) {
+      const jeu = new Map<TypeRessource, { val: HTMLElement; taux: HTMLElement }>();
+      for (const r of RESSOURCES) {
+        const info = INFOS[r];
+        const d = document.createElement('div');
+        d.className = 'jauge';
+        d.title = `${info.nom} — ${info.usage}`;
+        d.innerHTML = `<span class="icone">${info.icone}</span><span class="val"></span><span class="taux"></span>`;
+        const val = d.querySelector('.val') as HTMLElement;
+        const taux = d.querySelector('.taux') as HTMLElement;
+        val.style.color = info.couleur;
+        conteneur.appendChild(d);
+        jeu.set(r, { val, taux });
+      }
+      this.jauges.push(jeu);
     }
   }
 
@@ -292,6 +319,9 @@ export class Hud {
   private construireArmee(): void {
     for (const type of ORDRE_UNITES) {
       const def = DEFS_UNITES[type];
+      const rangee = document.createElement('div');
+      rangee.className = 'rangee-unite';
+
       const ligne = document.createElement('button');
       ligne.className = 'ligne-unite';
       ligne.title = def.role;
@@ -304,11 +334,22 @@ export class Hud {
         e.preventDefault();
         this.game.desenroler(type);
       });
-      this.lignesUnites.appendChild(ligne);
+
+      // Le clic droit n'existe pas au doigt : ce bouton est l'équivalent tactile.
+      const retirer = document.createElement('button');
+      retirer.className = 'retirer mobile-seul';
+      retirer.textContent = '−';
+      retirer.title = `Retirer un ${def.nom}`;
+      retirer.setAttribute('aria-label', `Retirer un ${def.nom}`);
+      retirer.addEventListener('click', () => this.game.desenroler(type));
+
+      rangee.append(ligne, retirer);
+      this.lignesUnites.appendChild(rangee);
       this.lignesArmee.set(type, {
         noeud: ligne,
         prix: ligne.querySelector('.prix-unite') as HTMLElement,
         compte: ligne.querySelector('.compte') as HTMLElement,
+        retirer,
       });
     }
   }
@@ -358,6 +399,33 @@ export class Hud {
       else g.selection = null;
     });
 
+    // Barre du bas (mobile) : elle porte les commandes que la barre du haut
+    // gardait pour elle sur grand écran.
+    this.btnZoneDock.addEventListener('click', () => g.basculerZone());
+    this.btnVitesseDock.addEventListener('click', () => g.basculerVitesse());
+    this.btnBoutique.addEventListener('click', () =>
+      this.ouvrirFeuille('boutique', !this.boutiqueOuverte),
+    );
+    this.btnArmeeDock.addEventListener('click', () =>
+      this.ouvrirFeuille('armee', !this.armeeOuverte),
+    );
+    this.btnFermerBoutique.addEventListener('click', () => this.ouvrirFeuille('boutique', false));
+    this.btnFermerArmee.addEventListener('click', () => this.ouvrirFeuille('armee', false));
+    this.btnFermerPanneau.addEventListener('click', () => {
+      g.selection = null;
+    });
+
+    // Pastille d'état : un tap déplie la barre complète, un autre la replie.
+    this.statut.addEventListener('click', () => this.ouvrirFeuille('statut', !this.statutOuvert));
+
+    // Toucher la carte referme ce qui est ouvert : on rend le terrain au joueur
+    // sans lui demander de viser une croix.
+    document.getElementById('jeu')?.addEventListener('pointerdown', () => {
+      this.ouvrirFeuille('statut', false);
+      this.ouvrirFeuille('boutique', false);
+      this.ouvrirFeuille('armee', false);
+    });
+
     this.btnUpgrade.addEventListener('click', () => {
       if (g.selection?.cat === 'tour') g.ameliorer(g.selection.tour);
     });
@@ -371,6 +439,46 @@ export class Hud {
       else if (s.cat === 'batiment') g.vendreBatiment(s.batiment);
       else g.renvoyerBebe(s.bebe);
     });
+  }
+
+  /**
+   * Ouvre ou referme une feuille mobile (boutique, armée, barre d'état).
+   * Elles s'excluent : deux panneaux ouverts en même temps, c'est la carte
+   * entièrement recouverte — exactement ce que cette refonte cherche à éviter.
+   */
+  private ouvrirFeuille(feuille: 'boutique' | 'armee' | 'statut', ouvrir: boolean): void {
+    if (ouvrir) {
+      this.boutiqueOuverte = feuille === 'boutique';
+      this.armeeOuverte = feuille === 'armee';
+      this.statutOuvert = feuille === 'statut';
+    } else if (feuille === 'boutique') {
+      this.boutiqueOuverte = false;
+    } else if (feuille === 'armee') {
+      this.armeeOuverte = false;
+    } else {
+      this.statutOuvert = false;
+    }
+    this.appliquerFeuilles();
+  }
+
+  /** Referme tout : au retour au menu et à la fin de partie. */
+  private fermerFeuilles(): void {
+    if (!this.boutiqueOuverte && !this.armeeOuverte && !this.statutOuvert) return;
+    this.boutiqueOuverte = false;
+    this.armeeOuverte = false;
+    this.statutOuvert = false;
+    this.appliquerFeuilles();
+  }
+
+  /** L'état des feuilles vit dans des classes du `body` : la mise en page est en CSS. */
+  private appliquerFeuilles(): void {
+    const classes = document.body.classList;
+    classes.toggle('boutique-ouverte', this.boutiqueOuverte);
+    classes.toggle('armee-ouverte', this.armeeOuverte);
+    classes.toggle('statut-ouvert', this.statutOuvert);
+    this.btnBoutique.classList.toggle('actif', this.boutiqueOuverte);
+    this.btnArmeeDock.classList.toggle('actif', this.armeeOuverte);
+    this.statut.setAttribute('aria-expanded', String(this.statutOuvert));
   }
 
   /** Active la n-ième carte de la boutique courante (raccourcis chiffrés). */
@@ -399,6 +507,9 @@ export class Hud {
           o && o.cat === entree.outil.cat && o.type === (entree.outil.type as string);
         this.game.outil = memeOutil ? null : entree.outil;
         this.game.selection = null;
+        // Une fois l'outil en main, la feuille n'a plus rien à dire : elle
+        // libère le bas de l'écran pour viser.
+        this.ouvrirFeuille('boutique', false);
       });
       const apercu = noeud.querySelector('canvas') as HTMLCanvasElement;
       this.cartes.appendChild(noeud);
@@ -433,6 +544,8 @@ export class Hud {
 
     this.menu.hidden = !auMenu;
     this.barreHaut.hidden = auMenu;
+    this.statut.hidden = auMenu || fini;
+    if (auMenu || fini) this.fermerFeuilles();
     this.boutique.hidden = auMenu;
     this.aide.hidden = auMenu;
     this.progression.hidden = auMenu;
@@ -452,6 +565,9 @@ export class Hud {
     const duel = g.mode === 'duel';
     this.jaugeAdversaire.hidden = !duel;
     this.btnVitesse.hidden = duel; // vitesse verrouillée quand deux horloges tournent
+    this.btnVitesseDock.hidden = duel;
+    this.btnArmeeDock.hidden = !duel;
+    if (!duel && this.armeeOuverte) this.ouvrirFeuille('armee', false);
     if (duel) {
       // On voit désormais toute son économie : c'est le sel du face à face.
       const r = g.vueAdverse.resume();
@@ -462,14 +578,16 @@ export class Hud {
     this.majArmee(duel);
 
     const prod = g.productionParSeconde();
-    for (const r of RESSOURCES) {
-      const j = this.jauges.get(r);
-      if (!j) continue;
-      j.val.textContent = String(Math.floor(g.banque[r]));
-      // Le débit de nourriture est net d'entretien : il peut passer au rouge.
-      const taux = prod[r];
-      j.taux.textContent = taux === 0 ? '' : `${taux > 0 ? '+' : ''}${taux.toFixed(1)}/s`;
-      j.taux.style.color = taux < 0 ? '#ff8a9c' : '#7ee08a';
+    for (const jeu of this.jauges) {
+      for (const r of RESSOURCES) {
+        const j = jeu.get(r);
+        if (!j) continue;
+        j.val.textContent = String(Math.floor(g.banque[r]));
+        // Le débit de nourriture est net d'entretien : il peut passer au rouge.
+        const taux = prod[r];
+        j.taux.textContent = taux === 0 ? '' : `${taux > 0 ? '+' : ''}${taux.toFixed(1)}/s`;
+        j.taux.style.color = taux < 0 ? '#ff8a9c' : '#7ee08a';
+      }
     }
 
     this.valAmes.textContent = String(g.ames);
@@ -485,11 +603,26 @@ export class Hud {
       this.jaugeCompteur.title = 'Vague en cours';
     }
 
+    // Pastille repliée : les trois chiffres qu'on regarde en jouant.
+    this.stVies.textContent = String(g.vies);
+    this.stVague.textContent = `${g.vague}/${g.vagueTotale}`;
+    this.stCompteur.textContent =
+      g.phase === 'preparation' ? `${Math.ceil(g.compteur)} s` : 'Assaut';
+    this.statut.classList.toggle('assaut', g.phase === 'vague');
+    this.statut.classList.toggle('danger', g.vies <= 3);
+
     this.progressionFill.style.width = `${g.progression() * 100}%`;
     this.progressionFill.classList.toggle('assaut', g.phase === 'vague');
 
     this.btnVitesse.textContent = `${g.vitesse === 1 ? '▶' : g.vitesse === 2 ? '▶▶' : '▶▶▶'} ${g.vitesse}×`;
     this.btnZone.textContent = g.zoneActive === 'defense' ? '🌾 Ferme' : '⚔ Défense';
+    // Sur la barre du bas, la place tient un pictogramme : la cible du bouton,
+    // pas la zone courante — comme son jumeau de la barre du haut.
+    this.btnVitesseDock.textContent = `${g.vitesse}×`;
+    this.btnZoneDock.textContent = g.zoneActive === 'defense' ? '🌾' : '⚔';
+    this.btnZoneDock.title =
+      g.zoneActive === 'defense' ? 'Aller à la ferme' : 'Aller à la défense';
+    this.btnBoutique.classList.toggle('outil-en-main', g.outil !== null);
 
     // La boutique suit la zone regardée par la caméra.
     if (this.zoneAffichee !== g.zoneActive) {
@@ -529,6 +662,7 @@ export class Hud {
       const cout = g.coutUnite(type);
       l.prix.textContent = formatCout(cout);
       l.compte.textContent = String(effectif[type]);
+      l.retirer.disabled = effectif[type] === 0;
       l.noeud.classList.toggle('inabordable', !peutPayer(g.banque, cout));
       total += effectif[type];
     }

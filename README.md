@@ -28,19 +28,22 @@ En production, un seul processus suffit — voir [Héberger](#héberger).
 | Action | Souris / clavier | Tactile |
 | --- | --- | --- |
 | Lancer la partie (depuis le menu) | Bouton, ou `Entrée` | Bouton |
-| Choisir quoi poser | Clic sur une carte de boutique, ou `1` … `6` | Tap sur une carte |
+| Choisir quoi poser | Clic sur une carte de boutique, ou `1` … `6` | Bouton 🛒, puis tap sur une carte |
 | Poser / sélectionner | Clic gauche | Tap ; ou glisser pour viser et lâcher pour poser |
 | Annuler la sélection | Clic droit ou `Échap` | Appui long, ou bouton ✕ |
-| Changer de zone (défense ↔ farm) | Bouton, onglet de boutique, ou `Tab` | Bouton ou onglet |
+| Changer de zone (défense ↔ farm) | Bouton, onglet de boutique, ou `Tab` | Bouton de la barre du bas, ou onglet |
 | Améliorer la tour sélectionnée | Bouton du panneau, ou `U` | Bouton du panneau |
 | Changer le mode de ciblage | Bouton du panneau, ou `C` | Bouton du panneau |
-| Vitesse ×1 / ×2 / ×3 | Bouton, ou `V` | Bouton |
+| Vitesse ×1 / ×2 / ×3 | Bouton, ou `V` | Bouton de la barre du bas |
 | Déplacer la caméra | `WASD` / `ZQSD` / flèches, ou glisser au bouton droit | Glisser à un doigt (deux doigts si un outil est en main) |
 | Zoom | Molette | Pincer, ou boutons + / − |
 | Rejouer / retour menu (écran de fin) | Boutons, ou `R` / `M` | Boutons |
 
 Sur mobile le jeu se joue **en paysage** ; en portrait, un bandeau invite à tourner
-l'appareil.
+l'appareil. Le HUD y est **replié** : ne restent affichés qu'une pastille d'état en
+haut à gauche et une barre de commandes en bas à droite ; boutique, armée, fiche de
+tour et état détaillé montent en feuilles à la demande, une seule à la fois, et
+s'effacent aussitôt le choix fait — voir [MOBILE.md](MOBILE.md#un-hud-replié).
 
 Les vagues **partent toutes seules** : 30 s avant la première, puis 20 s après chaque
 vague tenue. Le compte à rebours est dans la barre du haut et la barre de progression

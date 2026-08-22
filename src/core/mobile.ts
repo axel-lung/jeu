@@ -18,6 +18,16 @@ export function estTactile(): boolean {
 }
 
 /**
+ * Vrai sur un appareil qu'on tient dans la main : doigt, et pas de survol.
+ * Un portable à écran tactile mais piloté à la souris répond `hover: hover` et
+ * garde donc l'interface de bureau — c'est ce booléen, et non `estTactile`, qui
+ * décide du HUD replié.
+ */
+export function estMobile(): boolean {
+  return estTactile() && matchMedia('(hover: none)').matches;
+}
+
+/**
  * Vrai dans l'app empaquetée par Capacitor : la page vient du bundle embarqué,
  * pas d'un serveur. Le pont natif publie `Capacitor` sur `window` au démarrage.
  */

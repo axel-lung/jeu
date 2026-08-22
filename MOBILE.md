@@ -20,12 +20,31 @@ version mobile séparée à maintenir :
 | Glisser (une tour en main) | viser ; on pose en **lâchant** |
 | Pincer | zoomer / dézoomer |
 | Appui long | annuler la sélection (l'équivalent du clic droit) |
-| Boutons ronds à droite | zoom + / −, et annulation |
+| Barre du bas | construire 🛒, changer de zone, vitesse, zoom + / −, annulation |
 
 Un outil en main confisque le glisser à un doigt : c'est ce qui permet de viser la
 case sous le doigt et d'ajuster avant de lâcher, au lieu de poser à l'aveugle sous
 une pulpe qui masque la tuile. Pour déplacer la caméra dans cet état, on utilise
 deux doigts, ou on annule d'abord avec le bouton ✕.
+
+### Un HUD replié
+
+Sur téléphone, l'écran est la ressource rare : le jeu n'y laisse en permanence que
+deux ancrages, et rend tout le reste à la carte.
+
+| Ancrage | Où | Ce qu'il porte |
+| --- | --- | --- |
+| Pastille d'état | en haut à gauche | vies, vague, compte à rebours — un tap déplie le détail (stocks, débits, chrono, âmes) |
+| Barre de commandes | en bas à droite | 🛒 construire, zone, vitesse, zoom, et ✕ quand il y a quelque chose à annuler |
+
+Boutique, armée, fiche de la tour sélectionnée et état détaillé sont des **feuilles** :
+elles montent à la demande, une seule à la fois, et s'effacent dès qu'on a choisi —
+taper une carte de boutique referme la feuille pour qu'on vise à découvert, et taper
+la carte referme ce qui traîne. C'est le même DOM que sur le bureau : `main.ts` pose
+la classe `hud-mobile` sur le `body` quand le pointeur est un doigt *sans* survol
+(`estMobile()`), et toute la refonte tient dans une section CSS gardée par cette
+classe. Un portable à écran tactile piloté à la souris garde donc l'interface de
+bureau.
 
 Le jeu se joue **en paysage** : en portrait, un bandeau invite à tourner l'appareil.
 Au lancement d'une partie, le jeu demande le plein écran et verrouille l'orientation

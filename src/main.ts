@@ -2,6 +2,7 @@ import './style.css';
 import { Input } from './core/input';
 import {
   enregistrerServiceWorker,
+  estMobile,
   estTactile,
   neutraliserGestesNavigateur,
   passerEnPaysage,
@@ -73,6 +74,9 @@ const input = new Input(canvas, (sx, sy, facteur) => game.camera.zoomVers(sx, sy
 neutraliserGestesNavigateur();
 enregistrerServiceWorker();
 hud.tactile = estTactile();
+// Le HUD replié (panneaux en feuilles, ouverts à la demande) ne s'applique qu'au
+// doigt : c'est là que chaque pixel rendu à la carte compte.
+if (estMobile()) document.body.classList.add('hud-mobile');
 
 renderer.redimensionner();
 window.addEventListener('resize', () => renderer.redimensionner());

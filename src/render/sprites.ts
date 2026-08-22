@@ -1,5 +1,9 @@
 /**
- * Sprites dessinés à la main en Canvas 2D — aucun asset externe.
+ * Sprites dessinés à la main en Canvas 2D.
+ *
+ * Une seule exception : le Coq Gaulois, découpé d'une planche de sprites par
+ * `scripts/extraire-coq.mjs` et chargé par `images.ts`. Tout le reste — ennemis,
+ * décor, ferme — est tracé ici, ce qui garde le jeu net à tous les niveaux de zoom.
  *
  * Convention commune à toutes les fonctions :
  *   (x, y) est le point d'appui au sol, dans l'espace monde. Le corps se dessine
@@ -8,6 +12,7 @@
  */
 
 import type { TypeDecor } from '../game/map';
+import { image } from './images';
 
 /** Ombre portée au sol : c'est elle qui « pose » le sprite sur la tuile en 2.5D. */
 export function ombre(
@@ -78,7 +83,20 @@ export function yeux(
 /*  Tours                                                              */
 /* ------------------------------------------------------------------ */
 
-/** Coq Gaulois — France. Bleu-blanc-rouge, crête dressée, pose fière. */
+/**
+ * Hauteur du sprite du coq en pixels monde, pointe de lance comprise. Réglée
+ * pour que l'oiseau occupe à peu près la tuile, comme les autres sprites.
+ */
+const HAUTEUR_COQ = 62;
+
+/**
+ * Coq Gaulois — France. Seul sprite bitmap du jeu : il vient de la planche
+ * découpée par `scripts/extraire-coq.mjs`.
+ *
+ * Deux poses suffisent, la tour étant fixe : au repos, et la lance en avant
+ * juste après un tir. Le sprite regarde à droite ; `versGauche` le miroite,
+ * comme le faisait la version dessinée à la main.
+ */
 export function dessinerCoq(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -89,84 +107,49 @@ export function dessinerCoq(
   versGauche: boolean,
   recul: number,
 ): void {
+  // `recul` retombe de 1 à 0 sur la durée fixée par `dureeRecul` (towers.ts) :
+  // la pose d'estoc tient donc toute cette fenêtre, et le repos reprend juste
+  // avant le coup suivant.
+  const img = image(recul > 0.05 ? 'coqAttaque' : 'coqRepos');
+  if (!img) return; // images pas encore décodées : rien à dessiner cette frame
+
+  const h = HAUTEUR_COQ * s;
+  const w = (img.width / img.height) * h;
+  const bob = Math.sin(t * 2.6) * 1.2 * s;
+  const pique = recul * 4 * s; // le corps porte le coup vers l'avant
+
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(versGauche ? -s : s, s);
+  ctx.scale(versGauche ? -1 : 1, 1);
 
-  const bob = Math.sin(t * 2.6) * 1.2;
-  const pique = recul * 5; // le corps plonge en avant au moment du coup de bec
-
-  // Pattes
-  ctx.strokeStyle = '#e8912f';
-  ctx.lineWidth = 2.2;
-  ctx.lineCap = 'round';
-  for (const dx of [-4, 4]) {
-    ctx.beginPath();
-    ctx.moveTo(dx, -6);
-    ctx.lineTo(dx, -1);
-    ctx.moveTo(dx - 3, -1);
-    ctx.lineTo(dx + 3, -1);
-    ctx.stroke();
+  if (niveau >= 2) {
+    // Halo doré : marque la première amélioration sans rien peindre par-dessus.
+    ctx.save();
+    ctx.shadowColor = 'rgba(255, 209, 102, 0.9)';
+    ctx.shadowBlur = 8 * s;
+    ctx.globalAlpha = 0.85;
+    ctx.drawImage(img, pique - w / 2, bob - h, w, h);
+    ctx.restore();
   }
 
-  // Queue en panache bleu
-  ctx.save();
-  ctx.translate(-9, -18 + bob);
-  for (let i = 0; i < 3; i++) {
-    ctx.rotate(-0.22);
-    ellipse(ctx, -5 - i * 1.5, -3 - i * 3, 8 - i, 3.2, i % 2 ? '#2f5bd0' : '#4f7dff', '#1f3a8a');
-  }
+  ctx.drawImage(img, pique - w / 2, bob - h, w, h);
   ctx.restore();
 
-  // Corps
-  ellipse(ctx, 0, -16 + bob, 11, 12.5, '#f7f8ff', '#c8cde6');
-  // Aile rouge
-  ellipse(ctx, 3, -16 + bob, 6, 7.5, '#e4453f', '#a72a26');
-
-  // Tête
-  const hx = 5 + pique;
-  const hy = -33 + bob + pique * 0.4;
-  ellipse(ctx, hx, hy, 8, 8, '#f7f8ff', '#c8cde6');
-
-  // Crête
-  ctx.fillStyle = '#e4453f';
-  ctx.beginPath();
-  ctx.moveTo(hx - 5, hy - 6);
-  for (let i = 0; i < 3; i++) {
-    ctx.lineTo(hx - 4 + i * 4, hy - 13 - (i === 1 ? 3 : 0));
-    ctx.lineTo(hx - 1 + i * 4, hy - 6);
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  // Barbillon + bec
-  ellipse(ctx, hx + 4, hy + 6, 2.4, 3.4, '#e4453f');
-  ctx.fillStyle = '#ffc44d';
-  ctx.beginPath();
-  ctx.moveTo(hx + 6, hy + 1);
-  ctx.lineTo(hx + 15, hy + 3);
-  ctx.lineTo(hx + 6, hy + 5.5);
-  ctx.closePath();
-  ctx.fill();
-
-  yeux(ctx, hx + 2, hy - 1, 3.6, 2.6);
-
-  // Marques de niveau : écharpe, anneau doré, puis étincelles
-  if (niveau >= 2) {
-    ctx.fillStyle = '#2f5bd0';
-    ctx.fillRect(hx - 7, hy + 7, 13, 3);
-  }
+  // Les deux dernières marques de niveau restent dessinées, elles tournent.
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
   if (niveau >= 3) {
     ctx.strokeStyle = '#ffd166';
     ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.ellipse(0, -16 + bob, 12.5, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -3, 15, 5, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
   if (niveau >= 4) {
     for (let i = 0; i < 3; i++) {
       const a = t * 2.4 + (i * Math.PI * 2) / 3;
-      etoile(ctx, Math.cos(a) * 15, -22 + Math.sin(a) * 9, 2.6, '#ffd166');
+      etoile(ctx, Math.cos(a) * 16, -30 + Math.sin(a) * 10, 2.6, '#ffd166');
     }
   }
   ctx.restore();

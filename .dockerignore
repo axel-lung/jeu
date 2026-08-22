@@ -11,3 +11,12 @@ Dockerfile
 docker-compose.yml
 volumes
 *.log
+
+# Empaquetage mobile : les projets natifs et leurs sources d'icônes ne servent
+# qu'à fabriquer les apps des stores, jamais à faire tourner le serveur.
+android
+ios
+resources
+scripts
+capacitor.config.ts
+.env.example

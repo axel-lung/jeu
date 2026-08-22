@@ -1,0 +1,78 @@
+apply plugin: 'com.android.application'
+
+// Signature de release, optionnelle : renseignée par `android/keystore.properties`
+// (non versionné, cf. .gitignore). Sans ce fichier, seul le build debug marche —
+// suffisant pour installer le jeu sur son propre téléphone.
+def fichierCles = rootProject.file('keystore.properties')
+def cles = new Properties()
+if (fichierCles.exists()) {
+    cles.load(new FileInputStream(fichierCles))
+}
+
+android {
+    namespace = "fr.alng.nationsdefense"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "fr.alng.nationsdefense"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            if (cles.containsKey('storeFile')) {
+                storeFile rootProject.file(cles['storeFile'])
+                storePassword cles['storePassword']
+                keyAlias cles['keyAlias']
+                keyPassword cles['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Sans keystore.properties, on laisse Gradle produire un APK non signé
+            // plutôt que d'échouer : c'est le cas au premier clonage du dépôt.
+            if (cles.containsKey('storeFile')) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

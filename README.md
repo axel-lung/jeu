@@ -4,6 +4,10 @@ Hybride tower defense / RTS en 2.5D isométrique, d'après le document de design
 [`.claude/SKILL.md`](.claude/SKILL.md). **État actuel : les deux zones (défense + farm)
 sont jouables sur 10 vagues.**
 
+Le jeu se joue à la souris **et au doigt** : la même base de code sert le site, la PWA
+installable sur l'écran d'accueil, et les applications Android/iOS empaquetées par
+Capacitor — voir [MOBILE.md](MOBILE.md).
+
 ## Lancer
 
 ```bash
@@ -21,19 +25,22 @@ En production, un seul processus suffit — voir [Héberger](#héberger).
 
 ## Commandes
 
-| Action | Entrée |
-| --- | --- |
-| Lancer la partie (depuis le menu) | Bouton, ou `Entrée` |
-| Choisir quoi poser | Clic sur une carte de boutique, ou `1` … `6` |
-| Poser / sélectionner | Clic gauche |
-| Annuler la sélection | Clic droit ou `Échap` |
-| Changer de zone (défense ↔ farm) | Bouton, onglet de boutique, ou `Tab` |
-| Améliorer la tour sélectionnée | Bouton du panneau, ou `U` |
-| Changer le mode de ciblage | Bouton du panneau, ou `C` |
-| Vitesse ×1 / ×2 / ×3 | Bouton, ou `V` |
-| Déplacer la caméra | `WASD` / `ZQSD` / flèches, ou glisser au bouton droit |
-| Zoom | Molette |
-| Rejouer / retour menu (écran de fin) | Boutons, ou `R` / `M` |
+| Action | Souris / clavier | Tactile |
+| --- | --- | --- |
+| Lancer la partie (depuis le menu) | Bouton, ou `Entrée` | Bouton |
+| Choisir quoi poser | Clic sur une carte de boutique, ou `1` … `6` | Tap sur une carte |
+| Poser / sélectionner | Clic gauche | Tap ; ou glisser pour viser et lâcher pour poser |
+| Annuler la sélection | Clic droit ou `Échap` | Appui long, ou bouton ✕ |
+| Changer de zone (défense ↔ farm) | Bouton, onglet de boutique, ou `Tab` | Bouton ou onglet |
+| Améliorer la tour sélectionnée | Bouton du panneau, ou `U` | Bouton du panneau |
+| Changer le mode de ciblage | Bouton du panneau, ou `C` | Bouton du panneau |
+| Vitesse ×1 / ×2 / ×3 | Bouton, ou `V` | Bouton |
+| Déplacer la caméra | `WASD` / `ZQSD` / flèches, ou glisser au bouton droit | Glisser à un doigt (deux doigts si un outil est en main) |
+| Zoom | Molette | Pincer, ou boutons + / − |
+| Rejouer / retour menu (écran de fin) | Boutons, ou `R` / `M` | Boutons |
+
+Sur mobile le jeu se joue **en paysage** ; en portrait, un bandeau invite à tourner
+l'appareil.
 
 Les vagues **partent toutes seules** : 30 s avant la première, puis 20 s après chaque
 vague tenue. Le compte à rebours est dans la barre du haut et la barre de progression
@@ -114,7 +121,8 @@ deux spots pour pouvoir glisser un bâtiment.
 ## Ce qui est implémenté
 
 - **Rendu 2.5D** : projection isométrique maison, tri par profondeur de toutes les
-  entités, ombres portées, sprites dessinés à la main en Canvas (aucun asset externe).
+  entités, ombres portées, sprites dessinés à la main en Canvas. Seul le Coq Gaulois
+  vient d'une planche de sprites, découpée et détourée par `npm run sprites`.
 - **Zone défense** : chemin sinueux, entrée/sortie, grille constructible, décor bloquant.
 - **2 tours** : Coq Gaulois 🇫🇷 (anti-masse, sol uniquement) et Aigle Chauve 🇺🇸
   (sol + air, ×2 contre les volants). 4 niveaux chacune, dont un niveau 4 signature
@@ -185,6 +193,8 @@ récompenses), [`src/game/enemies.ts`](src/game/enemies.ts) (PV, vitesses, butin
 ```
 src/
 ├─ core/        projection iso, caméra, entrées, utilitaires (sans logique de jeu)
+│  ├─ input.ts     pointeur unifié souris/doigt : tap, glisser, pincement, appui long
+│  └─ mobile.ts    plein écran, orientation, gestes du navigateur, service worker
 ├─ game/        simulation pure, sans DOM
 │  ├─ mapgen.ts     génération procédurale du chemin et des spots
 │  ├─ map.ts        grille, tuiles, chemin, spots
@@ -193,7 +203,14 @@ src/
 │  ├─ resources.ts  les 4 ressources, coûts et escalade
 │  └─ game.ts       orchestration : phases, économie, impacts
 ├─ render/      sprites procéduraux + moteur de rendu trié en profondeur
+│  └─ images.ts   chargement des rares images bitmap (le sprite du coq)
+├─ assets/      vignettes découpées de la planche du coq
 └─ ui/          HUD en DOM par-dessus le canvas
+
+public/         manifeste PWA, service worker, icônes (copiés tels quels dans dist/)
+scripts/        génération des icônes et découpe des sprites (pur Node, sans dépendance)
+resources/      icône, écran de démarrage et planche de sprites (sources)
+android/ ios/   projets natifs Capacitor, versionnés (cf. MOBILE.md)
 ```
 
 `src/game/` ne connaît ni le canvas ni le DOM : c'est ce qui permet de le faire tourner
@@ -236,6 +253,32 @@ relais d'armée et d'instantané, fin de partie et déconnexion en cours de part
 
 La vitesse de jeu est **verrouillée à ×1 en duel** : accélérer chez soi décalerait les
 vagues et rendrait les envois incohérents.
+
+## Mobile, PWA et stores
+
+Rien à installer côté joueur : le site est déjà jouable au doigt. Pour aller plus loin :
+
+```bash
+npm run icones        # (re)génère les icônes du jeu et des stores
+npm run mobile:sync   # build web + copie dans les projets Android/iOS
+npm run mobile:android  # ouvre le projet dans Android Studio
+npm run mobile:ios      # ouvre le projet dans Xcode (macOS)
+npm run apk             # APK de test installable (SDK Android requis)
+npm run apk:release     # APK signé, si android/keystore.properties existe
+```
+
+- **PWA** : `public/manifest.webmanifest` + `public/sw.js`. Une fois « ajouté à l'écran
+  d'accueil », le jeu démarre en plein écran et le solo fonctionne hors ligne.
+- **Apps natives** : `android/` et `ios/` sont des projets [Capacitor](https://capacitorjs.com)
+  versionnés qui embarquent le build web. Ils n'ont pas de code de jeu propre : tout
+  correctif du jeu part du même `src/`.
+- **1 vs 1 depuis l'app** : la page vient du téléphone, pas d'un serveur. L'URL du salon
+  est fixée au build par `VITE_SERVEUR_WS` (cf. [`.env.example`](.env.example)).
+- **Sans rien installer** : le workflow [APK Android](.github/workflows/apk.yml) compile
+  l'APK sur les runners GitHub à chaque push, et le dépose en artefact téléchargeable.
+
+La marche à suivre complète — signature, versions, pièces à fournir au Play Store et à
+l'App Store — est dans [MOBILE.md](MOBILE.md).
 
 ## Héberger
 

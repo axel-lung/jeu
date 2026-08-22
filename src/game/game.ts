@@ -51,6 +51,7 @@ import {
   creerTour,
   degatsContre,
   DEFS_TOURS,
+  dureeRecul,
   niveauActuel,
   ORDRE_CIBLES,
   prochainNiveau,
@@ -738,7 +739,7 @@ export class Game {
   private majTours(dt: number): void {
     for (const t of this.tours) {
       t.t += dt;
-      t.recul = Math.max(0, t.recul - dt * 6);
+      t.recul = Math.max(0, t.recul - dt / t.dureeRecul);
       t.recharge -= dt;
 
       const cible = choisirCible(t, this.ennemis);
@@ -753,6 +754,7 @@ export class Game {
       const n = niveauActuel(t);
       t.recharge = 1 / n.cadence;
       t.recul = 1;
+      t.dureeRecul = dureeRecul(t, t.recharge);
 
       this.projectiles.push(
         creerProjectile(bouche(t), cible, {

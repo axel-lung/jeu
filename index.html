@@ -2,7 +2,27 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      `viewport-fit=cover` : la page passe sous l'encoche et la barre gestuelle,
+      les marges sont ensuite rendues par les `safe-area-inset-*` du CSS.
+      `user-scalable=no` : le zoom du navigateur volerait le pincement au jeu.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="description" content="Tower defense × gestion : tenez 10 vagues, la ferme paie la défense." />
+    <meta name="theme-color" content="#0e1420" />
+
+    <!-- Installation sur l'écran d'accueil (PWA). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icones/icone-192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/icones/icone-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Nations Defense" />
+
     <title>Nations Defense</title>
   </head>
   <body>
@@ -24,7 +44,7 @@
           <div class="jauge" title="Vague">
             <span class="icone">🌊</span><span id="val-vague" class="val">0 / 10</span>
           </div>
-          <div class="jauge" title="Temps de jeu écoulé">
+          <div class="jauge" id="jauge-temps" title="Temps de jeu écoulé">
             <span class="icone">⏱</span><span id="val-temps" class="val">0:00</span>
           </div>
           <div class="jauge accentue" id="jauge-compteur" title="Prochaine vague">
@@ -36,8 +56,10 @@
 
           <div class="ecart"></div>
 
-          <button id="btn-zone" title="Basculer entre les deux zones (Tab)">🌾 Ferme</button>
-          <button id="btn-vitesse" title="Vitesse de jeu (V)">▶ 1×</button>
+          <div class="actions-barre">
+            <button id="btn-zone" title="Basculer entre les deux zones (Tab)">🌾 Ferme</button>
+            <button id="btn-vitesse" title="Vitesse de jeu (V)">▶ 1×</button>
+          </div>
         </header>
 
         <aside id="panneau" hidden>
@@ -77,9 +99,25 @@
 
         <div id="bandeau" hidden></div>
 
+        <!--
+          Palette tactile : elle remplace les gestes qui n'existent pas au doigt
+          (clic droit, molette). Affichée par le JS au premier contact tactile.
+        -->
+        <div id="tactile" hidden>
+          <button id="btn-zoom-plus" title="Zoomer" aria-label="Zoomer">＋</button>
+          <button id="btn-zoom-moins" title="Dézoomer" aria-label="Dézoomer">－</button>
+          <button id="btn-annuler" title="Annuler la sélection" aria-label="Annuler">✕</button>
+        </div>
+
         <div id="aide">
-          Clic : poser / sélectionner · Clic droit : annuler · Molette : zoom · WASD ou
-          glisser-droit : caméra · Tab : changer de zone · V : vitesse
+          <span class="aide-souris">
+            Clic : poser / sélectionner · Clic droit : annuler · Molette : zoom · WASD ou
+            glisser-droit : caméra · Tab : changer de zone · V : vitesse
+          </span>
+          <span class="aide-tactile">
+            Tap : poser / sélectionner · Glisser : caméra · Pincer : zoom · Outil en main :
+            glisser pour viser, lâcher pour poser
+          </span>
         </div>
 
         <!-- Menu de démarrage : la carte générée reste visible derrière. -->
@@ -153,6 +191,16 @@
             <button id="btn-rejouer" class="principal">Rejouer cette carte</button>
             <button id="btn-menu">Retour au menu</button>
           </div>
+        </div>
+
+        <!--
+          Invitation à passer en paysage. Purement en CSS (media query
+          orientation), sans attribut `hidden` : le jeu iso a besoin de largeur.
+        -->
+        <div id="rotation">
+          <div class="pivot">📱</div>
+          <p><b>Tournez votre téléphone</b></p>
+          <p class="detail-rotation">Nations Defense se joue en paysage.</p>
         </div>
       </div>
     </div>

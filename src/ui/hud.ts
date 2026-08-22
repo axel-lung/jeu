@@ -35,6 +35,7 @@ import {
   valeurRevente,
   type TypeTour,
 } from '../game/towers';
+import { quandImagesPretes } from '../render/images';
 import { dessinerAigle, dessinerCoq } from '../render/sprites';
 import { dessinerBatiment, dessinerBebe } from '../render/farmSprites';
 
@@ -60,6 +61,8 @@ export interface RappelsHud {
   onPret: (pret: boolean) => void;
   /** L'hôte a changé un réglage : à pousser à l'adversaire. */
   onReglages: () => void;
+  /** Zoom demandé par les boutons tactiles (facteur > 1 = rapprocher). */
+  onZoom: (facteur: number) => void;
 }
 
 function el<T extends HTMLElement>(id: string): T {
@@ -83,8 +86,10 @@ const CARTES_BOUTIQUE: Record<ZoneBoutique, Entree[]> = {
       sous: def.role,
       touche: String(i + 1),
       apercu: (ctx) =>
+        // Le sprite du coq monte plus haut que le dessin de l'aigle (la lance) :
+        // on le réduit pour qu'il tienne dans la vignette de la carte.
         type === 'coq'
-          ? dessinerCoq(ctx, 0, 0, 1, 0.7, 1, false, 0)
+          ? dessinerCoq(ctx, 0, 0, 0.82, 0.7, 1, false, 0)
           : dessinerAigle(ctx, 0, 0, 1, 0.7, 1, false, 0),
     };
   }),
@@ -147,6 +152,11 @@ export class Hud {
   private readonly btnVendre = el<HTMLButtonElement>('btn-vendre');
   private readonly bandeau = el<HTMLElement>('bandeau');
 
+  private readonly panneauTactile = el<HTMLElement>('tactile');
+  private readonly btnZoomPlus = el<HTMLButtonElement>('btn-zoom-plus');
+  private readonly btnZoomMoins = el<HTMLButtonElement>('btn-zoom-moins');
+  private readonly btnAnnuler = el<HTMLButtonElement>('btn-annuler');
+
   private readonly menu = el<HTMLElement>('menu');
   private readonly choixFerme = el<HTMLElement>('choix-ferme');
   private readonly choixCarte = el<HTMLElement>('choix-carte');
@@ -184,6 +194,7 @@ export class Hud {
     entree: Entree;
     noeud: HTMLButtonElement;
     prix: HTMLElement;
+    apercu: HTMLCanvasElement;
   }[] = [];
   private readonly lignesArmee = new Map<
     TypeUnite,
@@ -196,6 +207,8 @@ export class Hud {
 
   /** Mode choisi dans le menu, avant que la partie ne démarre. */
   mode: Mode = 'solo';
+  /** Vrai sur un appareil tactile : la palette de gestes de secours s'affiche. */
+  tactile = false;
   /** Explication de fin fournie par le serveur en duel. */
   raisonFin = '';
   /** Vrai quand le joueur s'est annoncé prêt dans le salon. */
@@ -211,6 +224,11 @@ export class Hud {
     this.construireMenu();
     this.construireArmee();
     this.brancherBoutons();
+    // Les vignettes ne sont dessinées qu'à la construction des cartes : celles
+    // qui dépendent d'une image bitmap doivent être refaites à son arrivée.
+    quandImagesPretes(() => {
+      for (const c of this.cartesAffichees) this.dessinerApercu(c.apercu, c.entree);
+    });
   }
 
   private construireJauges(): void {
@@ -332,6 +350,14 @@ export class Hud {
       });
     }
 
+    // Palette tactile : ce que le doigt ne peut pas exprimer (molette, clic droit).
+    this.btnZoomPlus.addEventListener('click', () => this.rappels.onZoom(1.25));
+    this.btnZoomMoins.addEventListener('click', () => this.rappels.onZoom(0.8));
+    this.btnAnnuler.addEventListener('click', () => {
+      if (g.outil) g.outil = null;
+      else g.selection = null;
+    });
+
     this.btnUpgrade.addEventListener('click', () => {
       if (g.selection?.cat === 'tour') g.ameliorer(g.selection.tour);
     });
@@ -374,12 +400,14 @@ export class Hud {
         this.game.outil = memeOutil ? null : entree.outil;
         this.game.selection = null;
       });
+      const apercu = noeud.querySelector('canvas') as HTMLCanvasElement;
       this.cartes.appendChild(noeud);
-      this.dessinerApercu(noeud.querySelector('canvas') as HTMLCanvasElement, entree);
+      this.dessinerApercu(apercu, entree);
       this.cartesAffichees.push({
         entree,
         noeud,
         prix: noeud.querySelector('.prix') as HTMLElement,
+        apercu,
       });
     }
   }
@@ -388,6 +416,8 @@ export class Hud {
   private dessinerApercu(canvas: HTMLCanvasElement, entree: Entree): void {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(2, 0, 0, 2, 0, 0); // canvas en 2× pour rester net
     ctx.save();
     ctx.translate(canvas.width / 4, canvas.height / 2 - 2);
@@ -399,11 +429,16 @@ export class Hud {
     const g = this.game;
     const auMenu = g.phase === 'menu';
 
+    const fini = g.phase === 'victoire' || g.phase === 'defaite';
+
     this.menu.hidden = !auMenu;
     this.barreHaut.hidden = auMenu;
     this.boutique.hidden = auMenu;
     this.aide.hidden = auMenu;
     this.progression.hidden = auMenu;
+    this.panneauTactile.hidden = !this.tactile || auMenu || fini;
+    // Le bouton d'annulation s'allume quand il y a effectivement quelque chose à annuler.
+    this.btnAnnuler.classList.toggle('actif', g.outil !== null || g.selection !== null);
 
     if (auMenu) {
       this.majMenu();

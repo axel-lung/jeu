@@ -1,5 +1,11 @@
 import './style.css';
 import { Input } from './core/input';
+import {
+  enregistrerServiceWorker,
+  estTactile,
+  neutraliserGestesNavigateur,
+  passerEnPaysage,
+} from './core/mobile';
 import { Game } from './game/game';
 import { Renderer } from './render/renderer';
 import { Hud } from './ui/hud';
@@ -40,12 +46,21 @@ const reseau = new Reseau({
 });
 
 const hud = new Hud(game, {
-  onSolo: () => game.demarrer('solo'),
+  // `passerEnPaysage` est appelé dans la foulée du clic : le plein écran et le
+  // verrou d'orientation exigent un geste utilisateur, ils échoueraient plus tard.
+  onSolo: () => {
+    passerEnPaysage();
+    game.demarrer('solo');
+  },
   onConnecter: (url, salon, pseudo) => reseau.connecter(url, salon, pseudo),
-  onPret: (pret) => reseau.annoncerPret(pret),
+  onPret: (pret) => {
+    if (pret) passerEnPaysage();
+    reseau.annoncerPret(pret);
+  },
   onReglages: () => {
     if (reseau.suisHote && reseau.connecte) reseau.proposerReglages({ ...game.options });
   },
+  onZoom: (facteur) => input.zoomBouton(facteur),
 });
 
 game.onArmeeEnvoyee = (unites) => reseau.envoyerArmee(unites);
@@ -53,12 +68,21 @@ game.onFinPartie = (victoire) => {
   if (game.mode === 'duel') reseau.annoncerFin(victoire, game.vies, game.vague);
 };
 
-const input = new Input(canvas, (sx, sy, delta) => {
-  game.camera.zoomVers(sx, sy, delta > 0 ? 0.88 : 1.14);
-});
+const input = new Input(canvas, (sx, sy, facteur) => game.camera.zoomVers(sx, sy, facteur));
+
+neutraliserGestesNavigateur();
+enregistrerServiceWorker();
+hud.tactile = estTactile();
 
 renderer.redimensionner();
 window.addEventListener('resize', () => renderer.redimensionner());
+// Rotation de l'écran et apparition/disparition de la barre d'URL mobile : la
+// taille change après coup, d'où le second passage différé.
+window.addEventListener('orientationchange', () => {
+  renderer.redimensionner();
+  setTimeout(() => renderer.redimensionner(), 250);
+});
+window.visualViewport?.addEventListener('resize', () => renderer.redimensionner());
 
 function traiterTouches(): void {
   for (const k of input.prendreTouches()) {
@@ -113,8 +137,9 @@ function traiterCamera(dt: number): void {
   if (dx || dy) game.panClavier(dx, dy, dt);
 }
 
-/** Le curseur reflète l'action possible sous la souris. */
+/** Le curseur reflète l'action possible sous la souris. Sans objet au doigt. */
 function majCurseur(): void {
+  if (input.tactile) return;
   const { outil, survol } = game;
   if (outil) {
     canvas.style.cursor =
@@ -145,8 +170,12 @@ function boucle(maintenant: number): void {
     else game.clicDroit();
   }
 
-  game.maj(dt, input.souris.x, input.souris.y, input.souris.surCanvas);
+  game.maj(dt, input.pointeur.x, input.pointeur.y, input.pointeur.sur);
   renderer.dessiner();
+  // Un outil en main change la grammaire du geste à un doigt : viser au lieu de
+  // déplacer la caméra. L'entrée doit le savoir avant le prochain contact.
+  input.modePlacement = game.outil !== null;
+  hud.tactile = hud.tactile || input.tactile;
   hud.maj();
   majCurseur();
 

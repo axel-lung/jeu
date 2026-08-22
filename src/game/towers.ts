@@ -160,9 +160,28 @@ export interface Tour {
   kills: number;
   /** Animation de recul juste après un tir (1 → 0). */
   recul: number;
+  /** Durée, en secondes, sur laquelle `recul` retombe à 0 (cf. `dureeRecul`). */
+  dureeRecul: number;
   t: number;
   /** Prix réellement payé (les coûts montent avec le nombre de tours), pour la revente. */
   paye: Cout;
+}
+
+/**
+ * Combien de temps le recul d'un tir reste à l'écran, par type de tour.
+ *
+ * Pour le coq, c'est aussi la durée d'affichage de sa pose de tir : sous ~0,2 s
+ * le geste passe inaperçu. L'aigle, lui, garde le recul sec de son piqué.
+ */
+const DUREE_RECUL: Record<TypeTour, number> = { coq: 0.32, aigle: 0.17 };
+
+/**
+ * Durée du recul pour ce tir. Plafonnée par le type, et jamais plus longue que
+ * 70 % de l'intervalle entre deux coups : il doit rester un battement de repos,
+ * sinon une tour à cadence élevée reste figée dans sa pose d'attaque.
+ */
+export function dureeRecul(t: Tour, intervalle: number): number {
+  return Math.min(DUREE_RECUL[t.type], intervalle * 0.7);
 }
 
 let prochainId = 1;
@@ -181,6 +200,7 @@ export function creerTour(type: TypeTour, gx: number, gy: number, paye: Cout): T
     angle: 0,
     kills: 0,
     recul: 0,
+    dureeRecul: DUREE_RECUL[type],
     t: Math.random() * 10,
   };
 }

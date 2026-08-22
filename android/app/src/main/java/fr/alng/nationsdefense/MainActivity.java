@@ -59,9 +59,13 @@ public class MainActivity extends BridgeActivity {
         View contenu = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(contenu, (vue, insets) -> {
             // La barre d'état est masquée : elle ne compte pas ici, et c'est
-            // exactement la hauteur que le jeu récupère.
+            // exactement la hauteur que le jeu récupère. Le clavier, lui, doit
+            // être compté : c'est nous qui gérons les marges désormais, et sans
+            // ça il recouvrirait les champs du salon en 1 vs 1.
             Insets marges = insets.getInsets(
-                WindowInsetsCompat.Type.navigationBars() | WindowInsetsCompat.Type.displayCutout()
+                WindowInsetsCompat.Type.navigationBars() |
+                WindowInsetsCompat.Type.displayCutout() |
+                WindowInsetsCompat.Type.ime()
             );
             vue.setPadding(marges.left, marges.top, marges.right, marges.bottom);
             return WindowInsetsCompat.CONSUMED;

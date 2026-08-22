@@ -35,6 +35,16 @@ import {
   valeurRevente,
   type TypeTour,
 } from '../game/towers';
+import { audio } from '../core/audio';
+import {
+  enregistrerPartie,
+  recordPour,
+  reglerSon,
+  retenirDifficulte,
+  retenirDuel,
+  sauvegarde,
+  type Bilan,
+} from '../core/sauvegarde';
 import { quandImagesPretes } from '../render/images';
 import { dessinerAigle, dessinerCoq } from '../render/sprites';
 import { dessinerBatiment, dessinerBebe } from '../render/farmSprites';
@@ -176,6 +186,9 @@ export class Hud {
   private readonly valLongueur = el<HTMLElement>('val-longueur');
   private readonly btnGraine = el<HTMLButtonElement>('btn-graine');
   private readonly btnJouer = el<HTMLButtonElement>('btn-jouer');
+  private readonly valRecord = el<HTMLElement>('val-record');
+  private readonly btnSon = el<HTMLButtonElement>('btn-son');
+  private readonly btnSonMenu = el<HTMLButtonElement>('btn-son-menu');
 
   private readonly jaugeAdversaire = el<HTMLElement>('jauge-adversaire');
   private readonly valAdversaire = el<HTMLElement>('val-adversaire');
@@ -195,6 +208,7 @@ export class Hud {
   private readonly finTitre = el<HTMLElement>('fin-titre');
   private readonly finTexte = el<HTMLElement>('fin-texte');
   private readonly finStats = el<HTMLElement>('fin-stats');
+  private readonly finRecord = el<HTMLElement>('fin-record');
   private readonly btnRejouer = el<HTMLButtonElement>('btn-rejouer');
   private readonly btnMenu = el<HTMLButtonElement>('btn-menu');
 
@@ -224,6 +238,9 @@ export class Hud {
   private boutiqueOuverte = false;
   private armeeOuverte = false;
   private statutOuvert = false;
+  /** Bilan de la partie qui vient de finir, écrit une seule fois à la transition. */
+  private bilan: Bilan | null = null;
+  private finEnregistree = false;
 
   /** Mode choisi dans le menu, avant que la partie ne démarre. */
   mode: Mode = 'solo';
@@ -286,6 +303,7 @@ export class Hud {
       const b = bouton(r.cran, r.nom, r.resume);
       b.addEventListener('click', () => {
         this.game.previsualiser({ ferme: n });
+        retenirDifficulte(n, this.game.options.carte);
         this.rappels.onReglages();
         b.blur(); // sinon Entrée re-déclencherait ce bouton au lieu de lancer la partie
       });
@@ -297,6 +315,7 @@ export class Hud {
       const b = bouton(r.cran, r.nom, r.resume);
       b.addEventListener('click', () => {
         this.game.previsualiser({ carte: n });
+        retenirDifficulte(this.game.options.ferme, n);
         this.rappels.onReglages();
         b.blur();
       });
@@ -313,6 +332,49 @@ export class Hud {
     }
 
     this.inServeur.value = Reseau.urlParDefaut();
+
+    // Ce que la dernière session a laissé : difficulté, identité de salon, son.
+    const memoire = sauvegarde();
+    if (memoire.derniereDifficulte) {
+      this.game.previsualiser({
+        ferme: memoire.derniereDifficulte.ferme,
+        carte: memoire.derniereDifficulte.carte,
+      });
+    }
+    if (memoire.duel) {
+      this.inPseudo.value = memoire.duel.pseudo;
+      this.inSalon.value = memoire.duel.salon;
+    }
+    audio.effetsActifs = memoire.reglages.effets;
+    audio.musiqueActive = memoire.reglages.musique;
+    this.majBoutonsSon();
+  }
+
+  /** Un seul interrupteur pour tout le son : bruitages et ambiance ensemble. */
+  private basculerSon(): void {
+    const actif = !audio.effetsActifs;
+    audio.basculerEffets(actif);
+    audio.basculerMusique(actif);
+    reglerSon(actif, actif);
+    this.majBoutonsSon();
+    if (actif) audio.jouer('clic');
+  }
+
+  private majBoutonsSon(): void {
+    const actif = audio.effetsActifs;
+    this.btnSon.textContent = actif ? '🔊' : '🔇';
+    this.btnSonMenu.textContent = actif ? '🔊' : '🔇';
+    for (const b of [this.btnSon, this.btnSonMenu]) {
+      b.title = actif ? 'Couper le son (M)' : 'Rétablir le son (M)';
+      b.setAttribute('aria-label', actif ? 'Couper le son' : 'Rétablir le son');
+      b.setAttribute('aria-pressed', String(!actif));
+      b.classList.toggle('coupe', !actif);
+    }
+  }
+
+  /** Exposé pour le raccourci clavier `M`. */
+  basculerSonDepuisClavier(): void {
+    this.basculerSon();
   }
 
   /** Les trois unités que l'on peut mettre en file pour l'adversaire. */
@@ -371,15 +433,19 @@ export class Hud {
     });
     this.btnConnecter.addEventListener('click', () => {
       this.pret = false;
-      this.rappels.onConnecter(
-        this.inServeur.value.trim(),
-        this.inSalon.value.trim() || 'PUBLIC',
-        this.inPseudo.value.trim() || 'Joueur',
-      );
+      const salon = this.inSalon.value.trim() || 'PUBLIC';
+      const pseudo = this.inPseudo.value.trim() || 'Joueur';
+      retenirDuel(pseudo, salon);
+      this.rappels.onConnecter(this.inServeur.value.trim(), salon, pseudo);
     });
     this.btnGraine.addEventListener('click', () =>
       g.previsualiser({ graine: 1 + Math.floor(Math.random() * 99999) }),
     );
+    this.btnSon.addEventListener('click', () => this.basculerSon());
+    this.btnSonMenu.addEventListener('click', () => {
+      this.basculerSon();
+      this.btnSonMenu.blur(); // sinon Entrée rejouerait ce bouton au lieu de lancer
+    });
     this.btnRejouer.addEventListener('click', () => g.rejouer());
     this.btnMenu.addEventListener('click', () => g.retourMenu());
 
@@ -689,6 +755,7 @@ export class Hud {
 
     for (const [n, b] of this.boutonsFerme) b.classList.toggle('actif', g.options.ferme === n);
     for (const [n, b] of this.boutonsCarte) b.classList.toggle('actif', g.options.carte === n);
+    this.majLigneRecord();
     this.valGraine.textContent = String(g.options.graine);
     this.valLongueur.textContent = `${Math.round(g.map.longueurs[g.moi])} cases de chemin · ${g.map.spotsDe(g.moi).length} spots`;
 
@@ -707,6 +774,27 @@ export class Hud {
 
     // Le compteur de zone doit repartir de zéro quand on relance une partie.
     this.zoneAffichee = null;
+  }
+
+  /** Ce que valent les parties précédentes sur le réglage actuellement choisi. */
+  private majLigneRecord(): void {
+    const g = this.game;
+    const record = recordPour(g.options.ferme, g.options.carte);
+    const memoire = sauvegarde();
+
+    if (record) {
+      const resultat = record.victoire
+        ? `victoire en ${formatTemps(record.chrono)}`
+        : `vague ${record.vague}/${g.vagueTotale}`;
+      this.valRecord.textContent = `🏆 Record : ${resultat}`;
+      this.valRecord.title = `Votre meilleur résultat sur ce réglage : ${resultat}`;
+      return;
+    }
+    this.valRecord.textContent =
+      memoire.parties === 0
+        ? 'Première partie — bonne chance'
+        : `Réglage jamais tenté · ${memoire.parties} partie${memoire.parties > 1 ? 's' : ''}`;
+    this.valRecord.title = '';
   }
 
   /* ---------------------------------------------------------------- */
@@ -882,7 +970,27 @@ export class Hud {
     const g = this.game;
     const fini = g.phase === 'victoire' || g.phase === 'defaite';
     this.fin.hidden = !fini;
-    if (!fini) return;
+    if (!fini) {
+      this.finEnregistree = false;
+      this.bilan = null;
+      return;
+    }
+
+    // Une partie ne s'enregistre qu'une fois, à la bascule. Le duel a ses propres
+    // règles (deux joueurs, une carte partagée) : il ne nourrit pas les records.
+    if (!this.finEnregistree) {
+      this.finEnregistree = true;
+      this.bilan =
+        g.mode === 'duel'
+          ? null
+          : enregistrerPartie(g.options.ferme, g.options.carte, {
+              vague: g.vague,
+              chrono: g.chrono,
+              victoire: g.phase === 'victoire',
+              ennemisTues: g.ennemisTues,
+              toursPosees: g.toursPosees,
+            });
+    }
 
     const bloc = (valeur: string, label: string): string =>
       `<div class="bloc"><b>${valeur}</b><span>${label}</span></div>`;
@@ -892,6 +1000,26 @@ export class Hud {
       bloc(String(g.vies), 'Vies') +
       bloc(String(g.tours.length), 'Tours') +
       bloc(String(g.bebes.length), 'Bébés');
+
+    const bilan = this.bilan;
+    if (!bilan) {
+      this.finRecord.hidden = true;
+    } else if (bilan.record && bilan.precedent) {
+      const avant = bilan.precedent.victoire
+        ? `victoire en ${formatTemps(bilan.precedent.chrono)}`
+        : `vague ${bilan.precedent.vague}`;
+      this.finRecord.hidden = false;
+      this.finRecord.textContent = `🏆 Nouveau record — vous faisiez ${avant} jusqu'ici`;
+    } else if (bilan.precedent) {
+      const avant = bilan.precedent.victoire
+        ? `victoire en ${formatTemps(bilan.precedent.chrono)}`
+        : `vague ${bilan.precedent.vague}`;
+      this.finRecord.hidden = false;
+      this.finRecord.textContent = `Votre record sur ce réglage tient : ${avant}`;
+    } else {
+      this.finRecord.hidden = false;
+      this.finRecord.textContent = '🏆 Premier résultat sur ce réglage — la barre est posée';
+    }
 
     const duel = g.mode === 'duel';
     // En duel on ne relance pas seul : il faut repasser par le salon.

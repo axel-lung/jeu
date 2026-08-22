@@ -534,6 +534,48 @@ body {
   font-size: 16px;
 }
 
+/* Ce que les parties précédentes ont laissé : le seul élément du menu qui
+   change tout seul d'une session à l'autre. */
+.ligne-record {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--texte-doux);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+}
+
+#val-record {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#hud #btn-son-menu {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* Son coupé : le bouton s'éteint sans devenir une alerte. */
+#hud button.coupe {
+  color: var(--texte-doux);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Ligne de record de l'écran de fin. */
+#fin .record {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
 /* ---------- Mode et salon en ligne ---------- */
 
 .choix-mode {
@@ -1434,9 +1476,10 @@ body.hud-mobile.statut-ouvert #barre-haut {
   animation: feuille-descend 0.16s ease-out;
 }
 
-/* Zone et vitesse vivent dans la barre du bas : les répéter ici est du bruit. */
+/* Zone et vitesse vivent dans la barre du bas : les répéter ici est du bruit.
+   Le son, lui, n'existe qu'ici — le panneau déplié fait office de réglages. */
 body.hud-mobile #barre-haut .ecart,
-body.hud-mobile #barre-haut .actions-barre {
+body.hud-mobile #barre-haut .bureau-seul {
   display: none;
 }
 

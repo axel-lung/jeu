@@ -1,4 +1,5 @@
 import './style.css';
+import { audio } from './core/audio';
 import { Input } from './core/input';
 import {
   enregistrerServiceWorker,
@@ -73,6 +74,16 @@ const input = new Input(canvas, (sx, sy, facteur) => game.camera.zoomVers(sx, sy
 
 neutraliserGestesNavigateur();
 enregistrerServiceWorker();
+
+// Aucun navigateur ne laisse démarrer le son hors d'un geste du joueur : on
+// attend donc le premier contact, quel qu'il soit, pour ouvrir le contexte audio
+// et lancer l'ambiance du menu.
+function eveillerAudio(): void {
+  audio.demarrer();
+  audio.ambiance(game.phase === 'menu' ? 'menu' : 'ferme');
+}
+document.addEventListener('pointerdown', eveillerAudio, { once: true });
+document.addEventListener('keydown', eveillerAudio, { once: true });
 hud.tactile = estTactile();
 // Le HUD replié (panneaux en feuilles, ouverts à la demande) ne s'applique qu'au
 // doigt : c'est là que chaque pixel rendu à la carte compte.
@@ -106,6 +117,9 @@ function traiterTouches(): void {
       case 'v':
         game.basculerVitesse();
         break;
+      case 'm':
+        hud.basculerSonDepuisClavier();
+        break;
       case 'c':
         if (game.selection?.cat === 'tour') game.cyclerCible(game.selection.tour);
         break;
@@ -113,16 +127,19 @@ function traiterTouches(): void {
         if (game.selection?.cat === 'tour') game.ameliorer(game.selection.tour);
         break;
       case 'escape':
-        game.outil = null;
-        game.selection = null;
+        // Sur l'écran de fin il n'y a plus rien à annuler : Échap y ramène au
+        // menu, place que `M` occupait avant de servir à couper le son.
+        if (game.phase === 'victoire' || game.phase === 'defaite') {
+          game.retourMenu();
+        } else {
+          game.outil = null;
+          game.selection = null;
+        }
         break;
       case 'r':
         if (game.mode === 'solo' && (game.phase === 'victoire' || game.phase === 'defaite')) {
           game.rejouer();
         }
-        break;
-      case 'm':
-        if (game.phase === 'victoire' || game.phase === 'defaite') game.retourMenu();
         break;
     }
   }

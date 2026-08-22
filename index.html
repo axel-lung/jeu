@@ -70,8 +70,11 @@
           <div class="ecart"></div>
 
           <div class="actions-barre">
-            <button id="btn-zone" title="Basculer entre les deux zones (Tab)">🌾 Ferme</button>
-            <button id="btn-vitesse" title="Vitesse de jeu (V)">▶ 1×</button>
+            <button id="btn-zone" class="bureau-seul" title="Basculer entre les deux zones (Tab)">
+              🌾 Ferme
+            </button>
+            <button id="btn-vitesse" class="bureau-seul" title="Vitesse de jeu (V)">▶ 1×</button>
+            <button id="btn-son" title="Couper le son (M)" aria-pressed="false">🔊</button>
           </div>
         </header>
 
@@ -196,6 +199,12 @@
                   </span>
                 </button>
               </div>
+
+              <!-- Ce que le joueur emporte d'une partie à l'autre. -->
+              <div class="ligne-record">
+                <span id="val-record">Aucune partie sur ce réglage</span>
+                <button id="btn-son-menu" aria-pressed="false" aria-label="Couper le son">🔊</button>
+              </div>
             </div>
 
             <div class="colonne-menu">
@@ -242,6 +251,7 @@
         <div id="fin" hidden>
           <h1 id="fin-titre"></h1>
           <p id="fin-texte"></p>
+          <p id="fin-record" class="record" hidden></p>
           <div id="fin-stats"></div>
           <div class="ligne-fin">
             <button id="btn-rejouer" class="principal">Rejouer cette carte</button>

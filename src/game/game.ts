@@ -32,6 +32,7 @@ import {
 } from './difficulty';
 import { AUTRE, GameMap, type Joueur, type SpotRessource } from './map';
 import { creerProjectile, majProjectile, pointVise, type Projectile } from './projectiles';
+import { audio } from '../core/audio';
 import {
   crediter,
   echelonner,
@@ -134,6 +135,10 @@ export class Game {
   ames = 0;
   vies = VIES_DEPART;
 
+  /** Cumuls de la partie en cours : l'écran de fin et la sauvegarde les lisent. */
+  ennemisTues = 0;
+  toursPosees = 0;
+
   /** Numéro de la vague en cours ou terminée (0 = aucune lancée). */
   vague = 0;
   phase: Phase = 'menu';
@@ -219,6 +224,7 @@ export class Game {
     if (this.map.duel !== (mode === 'duel')) this.previsualiser({}, mode === 'duel');
     this.reinitialiser();
     this.phase = 'preparation';
+    audio.ambiance('ferme');
     this.allerA('ma-defense');
     this.compteur = ATTENTE_PREMIERE;
     this.attenteTotale = ATTENTE_PREMIERE;
@@ -231,6 +237,7 @@ export class Game {
   }
 
   retourMenu(): void {
+    audio.ambiance('menu');
     this.previsualiser({});
   }
 
@@ -246,6 +253,8 @@ export class Game {
     this.vueAdverse.vider();
     for (const s of this.map.spots) s.occupePar = null;
     this.effets.vider();
+    this.ennemisTues = 0;
+    this.toursPosees = 0;
 
     const depart = this.reglagesFerme.depart;
     this.banque = {
@@ -302,6 +311,9 @@ export class Game {
       boss: v.boss,
       vie: 2.4,
     };
+    audio.jouer(v.boss ? 'boss' : 'vague');
+    // Le fond se tend le temps de l'assaut, et retombe entre deux vagues.
+    audio.ambiance('assaut');
   }
 
   basculerVitesse(): void {
@@ -445,7 +457,13 @@ export class Game {
 
   /** Pose l'outil. Renvoie true si quelque chose a été construit. */
   poser(o: Outil, gx: number, gy: number): boolean {
-    if (!this.posableSur(o, gx, gy)) return false;
+    if (!this.posableSur(o, gx, gy)) {
+      // Le seul refus qui mérite un son est celui qu'on ne comprend pas d'un coup
+      // d'œil : la case est bonne, c'est la bourse qui ne suit pas. Un tap sur un
+      // arbre se voit, lui, et n'a pas besoin d'être commenté.
+      if (!peutPayer(this.banque, this.coutOutil(o))) audio.jouer('refus');
+      return false;
+    }
     const paye = this.coutOutil(o);
     payer(this.banque, paye);
     const w = gridToWorld(gx, gy);
@@ -454,6 +472,7 @@ export class Game {
       case 'tour': {
         const t = creerTour(o.type, gx, gy, paye);
         this.tours.push(t);
+        this.toursPosees++;
         this.selection = { cat: 'tour', tour: t };
         this.effets.confettis(w.x, w.y, 10, 10, 0.7);
         break;
@@ -476,17 +495,22 @@ export class Game {
         break;
       }
     }
+    audio.jouer('pose');
     return true;
   }
 
   ameliorer(t: Tour): boolean {
     const suivant = prochainNiveau(t);
-    if (!suivant || this.ames < suivant.coutAmes) return false;
+    if (!suivant || this.ames < suivant.coutAmes) {
+      audio.jouer('refus');
+      return false;
+    }
     this.ames -= suivant.coutAmes;
     t.niveau++;
     const w = gridToWorld(t.gx, t.gy);
     this.effets.confettis(w.x, w.y, 30, 18, 1.1);
     this.effets.texte(w.x, w.y, 40, suivant.titre, '#ffd166');
+    audio.jouer('ameliorer');
     return true;
   }
 
@@ -520,6 +544,7 @@ export class Game {
   }
 
   private texteRemboursement(gx: number, gy: number, rendu: Cout): void {
+    audio.jouer('vendre');
     const w = gridToWorld(gx, gy);
     let dz = 26;
     for (const [r, n] of Object.entries(rendu)) {
@@ -643,6 +668,7 @@ export class Game {
         if (b.eclosion === 0) {
           const w = gridToWorld(b.gx, b.gy);
           this.effets.confettis(w.x, w.y, 14, 10, 0.6);
+          audio.jouer('eclosion');
         }
         continue;
       }
@@ -709,6 +735,7 @@ export class Game {
   /** Un ennemi a atteint la sortie : il coûte des vies et repart avec du butin. */
   private fuite(e: Ennemi): void {
     this.vies -= e.def.degatsVies;
+    audio.jouer('fuite');
     const vole = piller(this.banque, e.def.pillage.ressource, e.def.pillage.quantite);
 
     const w = gridToWorld(e.gx, e.gy);
@@ -727,6 +754,8 @@ export class Game {
   /** Fin de partie locale. En duel, c'est le serveur qui tranche ensuite. */
   private terminer(victoire: boolean): void {
     this.phase = victoire ? 'victoire' : 'defaite';
+    audio.ambiance(null);
+    audio.jouer(victoire ? 'victoire' : 'defaite');
     this.onFinPartie?.(victoire);
   }
 
@@ -734,6 +763,8 @@ export class Game {
   terminerDepuisReseau(victoire: boolean): void {
     if (this.phase !== 'preparation' && this.phase !== 'vague') return;
     this.phase = victoire ? 'victoire' : 'defaite';
+    audio.ambiance(null);
+    audio.jouer(victoire ? 'victoire' : 'defaite');
   }
 
   private majTours(dt: number): void {
@@ -751,6 +782,7 @@ export class Game {
       t.angle = Math.atan2(wc.y - wt.y, wc.x - wt.x);
 
       if (t.recharge > 0) continue;
+      audio.jouer(t.type === 'coq' ? 'tir-coq' : 'tir-aigle');
       const n = niveauActuel(t);
       t.recharge = 1 / n.cadence;
       t.recul = 1;
@@ -830,6 +862,8 @@ export class Game {
     const w = gridToWorld(e.gx, e.gy);
     const z = e.z + e.def.taille;
 
+    this.ennemisTues++;
+    audio.jouer(e.def.boss ? 'mort-boss' : 'mort');
     this.ames += e.def.ames;
     this.banque.or += e.def.or;
 
@@ -864,6 +898,7 @@ export class Game {
       return;
     }
     this.phase = 'preparation';
+    audio.ambiance('ferme');
 
     {
       this.compteur = ATTENTE_ENTRE;

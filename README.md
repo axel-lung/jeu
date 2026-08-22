@@ -35,15 +35,52 @@ En production, un seul processus suffit — voir [Héberger](#héberger).
 | Améliorer la tour sélectionnée | Bouton du panneau, ou `U` | Bouton du panneau |
 | Changer le mode de ciblage | Bouton du panneau, ou `C` | Bouton du panneau |
 | Vitesse ×1 / ×2 / ×3 | Bouton, ou `V` | Bouton de la barre du bas |
+| Couper / rétablir le son | Bouton 🔊, ou `M` | Bouton 🔊 du panneau d'état |
 | Déplacer la caméra | `WASD` / `ZQSD` / flèches, ou glisser au bouton droit | Glisser à un doigt (deux doigts si un outil est en main) |
 | Zoom | Molette | Pincer, ou boutons + / − |
-| Rejouer / retour menu (écran de fin) | Boutons, ou `R` / `M` | Boutons |
+| Rejouer / retour menu (écran de fin) | Boutons, ou `R` / `Échap` | Boutons |
 
 Sur mobile le jeu se joue **en paysage** ; en portrait, un bandeau invite à tourner
 l'appareil. Le HUD y est **replié** : ne restent affichés qu'une pastille d'état en
 haut à gauche et une barre de commandes en bas à droite ; boutique, armée, fiche de
 tour et état détaillé montent en feuilles à la demande, une seule à la fois, et
 s'effacent aussitôt le choix fait — voir [MOBILE.md](MOBILE.md#un-hud-replié).
+
+## Le son
+
+Aucun fichier audio n'est livré : tout est **synthétisé en Web Audio** à l'exécution
+(`src/core/audio.ts`), comme les sprites sont dessinés en Canvas et les icônes
+générées par `npm run icones`. Le tir du Coq, la mort d'un ennemi, l'amélioration
+d'une tour, l'appel de vague : chaque effet est quelques oscillateurs et une
+enveloppe, réglables en changeant deux nombres.
+
+L'ambiance de fond suit la partie — nappes calmes en pentatonique majeure pendant la
+préparation, mineure et pulsée pendant l'assaut. Les motifs sont tirés au sort à
+chaque mesure, ce qui évite d'entendre la boucle tourner.
+
+Trois conséquences pratiques : rien à télécharger (le jeu reste instantané et jouable
+hors ligne), rien à créditer ni à racheter le jour d'une sortie commerciale, et rien
+à installer pour modifier un son. Le navigateur n'autorisant le son que depuis un
+geste du joueur, le contexte audio s'ouvre au premier contact avec la page.
+
+## Ce que le jeu retient
+
+`src/core/sauvegarde.ts` garde dans le `localStorage` ce qui a du sens d'une session
+à l'autre :
+
+- le **meilleur résultat par combinaison de difficulté** (neuf cases possibles),
+  affiché dans le menu et rappelé sur l'écran de fin ;
+- les **compteurs** : parties jouées, victoires, ennemis tués, tours posées ;
+- les **préférences** : son coupé ou non, dernière difficulté choisie, pseudo et code
+  de salon du 1 vs 1.
+
+Le classement se fait d'abord sur la vague atteinte, puis sur le temps : tenir une
+vague de plus prime sur tout, et à vague égale une victoire rapide vaut mieux qu'une
+victoire longue. Le duel ne nourrit pas les records — deux joueurs sur une carte
+partagée, ce ne sont pas les mêmes règles.
+
+Tout accès au stockage est isolé : navigation privée, quota plein ou cookies bloqués
+font perdre les records, jamais la partie en cours.
 
 Les vagues **partent toutes seules** : 30 s avant la première, puis 20 s après chaque
 vague tenue. Le compte à rebours est dans la barre du haut et la barre de progression
@@ -138,6 +175,10 @@ deux spots pour pouvoir glisser un bâtiment.
 - **2 bébés** : Poussin 🇫🇷 (+30 % nourriture) et Aiglon 🇺🇸 (+25 % or et pierre).
 - **10 vagues** scriptées, boss à la 10, modes de ciblage (premier / dernier / plus
   fort / plus proche).
+- **Son synthétisé** : seize effets et une ambiance générative, sans un seul fichier
+  audio dans le dépôt.
+- **Sauvegarde locale** : records par difficulté, compteurs de parties et
+  préférences retenus d'une session à l'autre.
 
 ## L'économie
 

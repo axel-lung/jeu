@@ -50,6 +50,30 @@ Le jeu se joue **en paysage** : en portrait, un bandeau invite à tourner l'appa
 Au lancement d'une partie, le jeu demande le plein écran et verrouille l'orientation
 quand la plateforme le permet (Android le fait, iOS refuse hors app native).
 
+### Où passe la barre d'état
+
+L'heure, la batterie et les notifications coûtent une bande de hauteur que la carte
+isométrique réclame. Ce qu'on peut en faire dépend de la forme :
+
+| Forme | Barre d'état |
+| --- | --- |
+| App native Android | **masquée en permanence**, dès l'écran de démarrage (cf. `MainActivity`) |
+| PWA installée | masquée : le manifeste demande `display: fullscreen` |
+| Navigateur Android | masquée **pendant la partie** — `passerEnPaysage()` demande le plein écran au clic sur « Lancer la partie », un geste utilisateur étant exigé |
+| iPhone (Safari) | rien à faire : iOS n'expose pas l'API plein écran sur iPhone. En paysage, le système la masque de lui-même la plupart du temps |
+
+Côté Android natif, `MainActivity` masque `Type.statusBars()` via
+`WindowInsetsControllerCompat` et remasque à chaque retour de focus : un glissement
+depuis le haut rappelle la barre le temps de la lire, puis elle repart
+(`BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`).
+
+La barre de **navigation**, elle, reste visible — c'est par elle qu'on quitte le jeu.
+Comme Android 15 impose le dessin bord à bord aux applications récentes, l'activité
+assume ce mode sur toutes les versions et remet en marge ce qui reste réellement
+occupé (barre de navigation, encoche) : sans ça la barre de commandes du HUD
+tomberait sous la barre gestuelle. Ces marges étant posées côté natif, les
+`env(safe-area-inset-*)` du CSS valent zéro dans l'app — pas de double marge.
+
 ---
 
 ## 2. PWA : installer depuis le navigateur

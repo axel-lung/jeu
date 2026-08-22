@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Le bleu nuit du jeu, celui de la variable CSS `fond`. Il habille la
+      fenêtre elle-même : depuis qu'on dessine bord à bord, la bande laissée à
+      la barre de navigation laisserait voir le fond du thème (noir) au lieu du
+      décor du jeu.
+    -->
+    <color name="fond_jeu">#0e1420</color>
+</resources>

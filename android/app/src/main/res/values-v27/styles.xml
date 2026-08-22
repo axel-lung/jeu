@@ -1,26 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Depuis Android 8.1, une fenêtre peut décider de s'étendre sous l'encoche.
+  `shortEdges` est ce qui permet au jeu d'occuper toute la dalle en paysage ;
+  `MainActivity` remet ensuite l'encoche en marge pour que rien d'important ne
+  passe dessous. L'attribut n'existant pas avant l'API 27, il vit dans ce
+  dossier plutôt que dans `values/`.
+-->
 <resources>
-
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-    </style>
 
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
         <item name="android:windowBackground">@color/fond_jeu</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
-
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
-        <!-- L'écran de démarrage est plein écran lui aussi : sinon la barre
-             d'état s'affiche une seconde avant que MainActivity ne la masque. -->
         <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

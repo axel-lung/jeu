@@ -107,9 +107,10 @@ export function dessinerCoq(
   versGauche: boolean,
   recul: number,
 ): void {
-  // `recul` retombe de 1 à 0 en ~1/6 s après chaque tir : au-delà du seuil on
-  // montre la pose d'estoc, en deçà on est revenu au repos.
-  const img = image(recul > 0.25 ? 'coqAttaque' : 'coqRepos');
+  // `recul` retombe de 1 à 0 sur la durée fixée par `dureeRecul` (towers.ts) :
+  // la pose d'estoc tient donc toute cette fenêtre, et le repos reprend juste
+  // avant le coup suivant.
+  const img = image(recul > 0.05 ? 'coqAttaque' : 'coqRepos');
   if (!img) return; // images pas encore décodées : rien à dessiner cette frame
 
   const h = HAUTEUR_COQ * s;

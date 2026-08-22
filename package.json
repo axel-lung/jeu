@@ -11,6 +11,7 @@
     "serveur": "node server/serveur.mjs",
     "start": "node server/serveur.mjs",
     "icones": "node scripts/generer-icones.mjs",
+    "sprites": "node scripts/extraire-coq.mjs",
     "mobile:sync": "npm run build && cap sync",
     "mobile:android": "npm run build && cap sync android && cap open android",
     "mobile:ios": "npm run build && cap sync ios && cap open ios",

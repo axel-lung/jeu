@@ -35,6 +35,7 @@ import {
   valeurRevente,
   type TypeTour,
 } from '../game/towers';
+import { quandImagesPretes } from '../render/images';
 import { dessinerAigle, dessinerCoq } from '../render/sprites';
 import { dessinerBatiment, dessinerBebe } from '../render/farmSprites';
 
@@ -85,8 +86,10 @@ const CARTES_BOUTIQUE: Record<ZoneBoutique, Entree[]> = {
       sous: def.role,
       touche: String(i + 1),
       apercu: (ctx) =>
+        // Le sprite du coq monte plus haut que le dessin de l'aigle (la lance) :
+        // on le réduit pour qu'il tienne dans la vignette de la carte.
         type === 'coq'
-          ? dessinerCoq(ctx, 0, 0, 1, 0.7, 1, false, 0)
+          ? dessinerCoq(ctx, 0, 0, 0.82, 0.7, 1, false, 0)
           : dessinerAigle(ctx, 0, 0, 1, 0.7, 1, false, 0),
     };
   }),
@@ -191,6 +194,7 @@ export class Hud {
     entree: Entree;
     noeud: HTMLButtonElement;
     prix: HTMLElement;
+    apercu: HTMLCanvasElement;
   }[] = [];
   private readonly lignesArmee = new Map<
     TypeUnite,
@@ -220,6 +224,11 @@ export class Hud {
     this.construireMenu();
     this.construireArmee();
     this.brancherBoutons();
+    // Les vignettes ne sont dessinées qu'à la construction des cartes : celles
+    // qui dépendent d'une image bitmap doivent être refaites à son arrivée.
+    quandImagesPretes(() => {
+      for (const c of this.cartesAffichees) this.dessinerApercu(c.apercu, c.entree);
+    });
   }
 
   private construireJauges(): void {
@@ -391,12 +400,14 @@ export class Hud {
         this.game.outil = memeOutil ? null : entree.outil;
         this.game.selection = null;
       });
+      const apercu = noeud.querySelector('canvas') as HTMLCanvasElement;
       this.cartes.appendChild(noeud);
-      this.dessinerApercu(noeud.querySelector('canvas') as HTMLCanvasElement, entree);
+      this.dessinerApercu(apercu, entree);
       this.cartesAffichees.push({
         entree,
         noeud,
         prix: noeud.querySelector('.prix') as HTMLElement,
+        apercu,
       });
     }
   }
@@ -405,6 +416,8 @@ export class Hud {
   private dessinerApercu(canvas: HTMLCanvasElement, entree: Entree): void {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(2, 0, 0, 2, 0, 0); // canvas en 2× pour rester net
     ctx.save();
     ctx.translate(canvas.width / 4, canvas.height / 2 - 2);

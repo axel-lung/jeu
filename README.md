@@ -121,7 +121,8 @@ deux spots pour pouvoir glisser un bâtiment.
 ## Ce qui est implémenté
 
 - **Rendu 2.5D** : projection isométrique maison, tri par profondeur de toutes les
-  entités, ombres portées, sprites dessinés à la main en Canvas (aucun asset externe).
+  entités, ombres portées, sprites dessinés à la main en Canvas. Seul le Coq Gaulois
+  vient d'une planche de sprites, découpée et détourée par `npm run sprites`.
 - **Zone défense** : chemin sinueux, entrée/sortie, grille constructible, décor bloquant.
 - **2 tours** : Coq Gaulois 🇫🇷 (anti-masse, sol uniquement) et Aigle Chauve 🇺🇸
   (sol + air, ×2 contre les volants). 4 niveaux chacune, dont un niveau 4 signature
@@ -202,11 +203,13 @@ src/
 │  ├─ resources.ts  les 4 ressources, coûts et escalade
 │  └─ game.ts       orchestration : phases, économie, impacts
 ├─ render/      sprites procéduraux + moteur de rendu trié en profondeur
+│  └─ images.ts   chargement des rares images bitmap (le sprite du coq)
+├─ assets/      vignettes découpées de la planche du coq
 └─ ui/          HUD en DOM par-dessus le canvas
 
 public/         manifeste PWA, service worker, icônes (copiés tels quels dans dist/)
-scripts/        génération des icônes (pur Node, sans dépendance)
-resources/      icône et écran de démarrage source pour les stores
+scripts/        génération des icônes et découpe des sprites (pur Node, sans dépendance)
+resources/      icône, écran de démarrage et planche de sprites (sources)
 android/ ios/   projets natifs Capacitor, versionnés (cf. MOBILE.md)
 ```
 
